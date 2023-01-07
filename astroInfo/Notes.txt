@@ -1,0 +1,82 @@
+TODO:
+  - work on adapting detection algorithm to be more accurate
+    - compare multiple attributes at once rather than just highest/lowest outliers overall
+  - work on adapting program to work on incoming stream of data, not just set data --> may need to do some research on this
+
+
+
+
+
+
+
+
+
+ASTEROID ATTRIBUTES & MEANINGS:
+
+RB:
+    Good = value of 1
+    Interesting if value is generally mediocre then spikes in "accuracy"
+    Intersting if value is generally high then dips in "accuracy" (especcialy 
+
+
+ELONG:
+    value of 1 is perfect circle, value greater than 1 is more elongated
+    Interesting if if value is high
+
+
+H:
+    normalized to phaseangle
+    lower value = brighter
+    higher value = dimmer
+
+
+MAG18OMAG8:
+    Good = value closer to zero
+    Interesting if the number of sigmas is high (away from zero)
+    Not as interesting if magpsf or H are also lower values (brighter)
+    
+    
+    
+    
+Best possible case for outlier
+    * RB down
+    * elong up
+    * H down
+    * mag18omag8 up
+    
+    
+    
+Flag outliers in 1 feature first, then compare to other features to see if it is also an outlier (as above)
+
+
+
+Potentially Interesting Asteroids:
+* 99928
+* 9937
+* 99970
+* 6478 (Gault)
+* 99936
+* 98726
+
+
+
+########################################################################################
+# How this program works:                                                              #
+# The program accepts a number of asteroids to observe and value for where in the data #
+# to start. Then, it pulls data for each individual asteroid, and finds the most       #
+# outlying point (min or max) and calculates the number of standard deviations away    #
+# from the mean that point is. If it is above the mean, the number of sigmas is stored #
+# in the matrix. If it is below the mean, the negative number of sigmas is stored in   #
+# the matrix. The final columns in the matrix are a row sum (of sigma multipliers) and #
+# a row sum of the absolute value of each matrix entry. The program then allows users  #
+# to filter the data by features at specific user-given values. Then users can view    #
+# histograms of all the sigma data and scatterplots for individual asteroids           #
+########################################################################################
+
+
+
+
+
+
+
+    
