@@ -1,0 +1,44 @@
+Python 3.10.8 (main, Nov 24 2022, 14:13:03) [GCC 11.2.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> python.el: native completion setup loaded
+>>> How many asteroids do you want to look at(-1 if all): 10
+Where to start in data:(-1 if random):  0
+   Name     elong     ZTF-ELONG        rb  ... mag18omag8  ZTF-MAG18OMAG8    Row Sum  Abs Row Sum
+0   990  3.333270  ZTF18aczzlla  0.000000  ...   3.555025    ZTF18achsask   6.855269    11.259226
+1   949  3.323837  ZTF18acelwmc  0.000000  ...   3.167540    ZTF18acggviw   6.579113    10.481947
+2  9173  2.709558  ZTF18abvgevh  2.205082  ...   2.825582    ZTF19aakzlih   9.915912     9.915912
+3  9997  2.758318  ZTF18acqynpx  2.313034  ...   2.585372    ZTF18acwvpif   5.554608     9.758838
+4  8721  3.372912  ZTF18aceobfn  0.000000  ...   4.247114    ZTF18achclxo   7.335963    11.541692
+5   901  3.287932  ZTF18aczbshv -2.018928  ...   3.472390    ZTF18abwljqj   2.823553    10.697090
+6  8803  2.676087  ZTF18acwfxmp  2.722091  ...   2.699718    ZTF18adbnlbx  10.024192    10.024192
+7  9205  3.070482  ZTF18abujkkm  0.000000  ...   3.038475    ZTF20aasukev   5.504468     9.703990
+8  8906  2.514429  ZTF20aamhqny  0.000000  ...   3.837862    ZTF18acbyqkh   5.768610    10.554894
+9  9219  2.928355  ZTF20aamiavr  0.000000  ...   5.180974    ZTF18abyenjq   8.109473    12.847286
+
+[10 rows x 11 columns]
+Look at total data histogram (y/n): n
+Enter feature to filter by('n' if None): 
+rb
+High Limit( Data > limit): 
+-3
+Low limit( Data < Limit): 
+0
+   Name     elong     ZTF-ELONG        rb  ... mag18omag8  ZTF-MAG18OMAG8   Row Sum  Abs Row Sum
+0   990  3.333270  ZTF18aczzlla  0.000000  ...   3.555025    ZTF18achsask  6.855269    11.259226
+1   949  3.323837  ZTF18acelwmc  0.000000  ...   3.167540    ZTF18acggviw  6.579113    10.481947
+4  8721  3.372912  ZTF18aceobfn  0.000000  ...   4.247114    ZTF18achclxo  7.335963    11.541692
+5   901  3.287932  ZTF18aczbshv -2.018928  ...   3.472390    ZTF18abwljqj  2.823553    10.697090
+7  9205  3.070482  ZTF18abujkkm  0.000000  ...   3.038475    ZTF20aasukev  5.504468     9.703990
+8  8906  2.514429  ZTF20aamhqny  0.000000  ...   3.837862    ZTF18acbyqkh  5.768610    10.554894
+9  9219  2.928355  ZTF20aamiavr  0.000000  ...   5.180974    ZTF18abyenjq  8.109473    12.847286
+
+[7 rows x 11 columns]
+Enter feature to filter by('n' if None): 
+n
+Inspect Specific Asteroid(y/n): y
+Asteroid Name:
+901
+Asteroid 901 Stats:
+
+Show all plots? (y/n): n
+>>> 

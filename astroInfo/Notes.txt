@@ -3,12 +3,21 @@ TODO:
     - compare multiple attributes at once rather than just highest/lowest outliers overall
   - work on adapting program to work on incoming stream of data, not just set data --> may need to do some research on this
 
+  - improve usability??
+    - ask users if they would like to view or save plots (rather than just showing them)
+    - when users view a specific asteroid, pull all relevant data & compile into table
+      - give users option to download table or view table
+      - give users option to filter table like when viewing all data
+      - 
 
 
 
 
 
-
+IDEAS for improving code accuracy:
+  - compare attributes through plots & calculate probability of 1 given another.
+    - use a probability threshold to flag future asteroids
+    - compare attributes pairwise then group the conditions & flag if a certain amount are true.
 
 
 ASTEROID ATTRIBUTES & MEANINGS:
@@ -35,19 +44,12 @@ MAG18OMAG8:
     Interesting if the number of sigmas is high (away from zero)
     Not as interesting if magpsf or H are also lower values (brighter)
     
-    
-    
-    
+       
 Best possible case for outlier
     * RB down
     * elong up
     * H down
     * mag18omag8 up
-    
-    
-    
-Flag outliers in 1 feature first, then compare to other features to see if it is also an outlier (as above)
-
 
 
 Potentially Interesting Asteroids:
@@ -57,8 +59,6 @@ Potentially Interesting Asteroids:
 * 6478 (Gault)
 * 99936
 * 98726
-
-
 
 ########################################################################################
 # How this program works:                                                              #
@@ -73,10 +73,3 @@ Potentially Interesting Asteroids:
 # histograms of all the sigma data and scatterplots for individual asteroids           #
 ########################################################################################
 
-
-
-
-
-
-
-    

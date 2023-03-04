@@ -2,16 +2,16 @@ from pymongo import MongoClient
 from pprint import pprint
 import pandas as pd
 import statistics as stat
-import ruptures as rpt
+#import ruptures as rpt
 import matplotlib.pyplot as plt
 import numpy as np
 
 # Connecting to mongo database
-dest = "mongodb://schappus:unicornsSUM22monsoon@cmp4818.computers.nau.edu:27017"
+dest = "mongodb://schappus:unicornsSUM22@cmp4818.computers.nau.edu:27017"
 client = MongoClient(dest)
 db = client.ztf
 ztf_series_data = db['mag18o8_ss1']
-asteroid_data = db['asteroids']
+asteroid_data = db['asteroids_all']
 
 # local vars
 maxIn = 500

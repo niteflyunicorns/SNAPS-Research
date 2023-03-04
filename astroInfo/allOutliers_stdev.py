@@ -2,20 +2,20 @@ from pymongo import MongoClient
 from pprint import pprint
 import pandas as pd
 import statistics as stat
-import ruptures as rpt
+#import ruptures as rpt
 import matplotlib.pyplot as plt
 # import numpy as np
 
 # Connecting to mongo database
-dest = "mongodb://schappus:unicornsSUM22monsoon@cmp4818.computers.nau.edu:27017"
+dest = "mongodb://schappus:unicornsSUM22@cmp4818.computers.nau.edu:27017"
 client = MongoClient(dest)
 db = client.ztf
 ztf_series_data = db["snapshot 1"]
-asteroid_data = db['asteroids']
+asteroid_data = db['asteroids_all']
 
 # local vars
 stdev_mult = 2
-maxIn = 50
+maxIn = 5
 divider = ("_" * 120)
 ast_ct = 0
 
@@ -23,7 +23,7 @@ ast_ct = 0
 asteroids = pd.DataFrame(asteroid_data.find({},{ '_id': 0, 'ssnamenr' : 1}))
 
 # attributes we look at 
-wanted_attr = ["magpsf"]
+wanted_attr = ["rb"]
 
 # TOP 4 ATTR:
 # magpsf: magnitude
@@ -80,7 +80,8 @@ while ( ast_ct < maxIn and ast_ct < len(asteroids)):
         plt.scatter(asteroid["jd"], asteroid[feature])
         plt.xlabel("Julian Date")
         plt.ylabel(feature)
-        plt.show()
+        plt.title(str(name))
+        plt.show
         print(divider)
         
         attr_ct += 1

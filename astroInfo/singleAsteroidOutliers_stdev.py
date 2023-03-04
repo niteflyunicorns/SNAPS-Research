@@ -2,17 +2,17 @@ from pymongo import MongoClient
 from pprint import pprint
 import pandas as pd
 import statistics as stat
-import ruptures as rpt
+#import ruptures as rpt
 import matplotlib.pyplot as plt
 # import numpy as np
 
 # What properties are cyclic? Maybe all of them, don't really want to
 # prejudice our understanding
-dest = "mongodb://schappus:unicornsSUM22monsoon@cmp4818.computers.nau.edu:27017"
+dest = "mongodb://schappus:unicornsSUM22@cmp4818.computers.nau.edu:27017"
 client = MongoClient(dest)
 db = client.ztf
 ztf_series_data = db["snapshot 1"]
-asteroid_data = db['asteroids']
+asteroid_data = db['asteroids_all']
 
 # FOR TESTING:
 # uncomment to test specific a specific asteroid, feature, & stdev

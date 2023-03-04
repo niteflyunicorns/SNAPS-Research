@@ -1,0 +1,111 @@
+Python 3.10.8 (main, Nov 24 2022, 14:13:03) [GCC 11.2.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> python.el: native completion setup loaded
+>>> SNAPS Menu
+1. Run program
+2. View specific asteroid
+3. Help
+4. Quit
+1
+How many asteroids do you want to look at(-1 if all): Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/home/sjc497/astroInfoResearch/astroInfo/newOutlierDetectionMatrix.py", line 445, in <module>
+    runProgram()
+  File "/home/sjc497/astroInfoResearch/astroInfo/newOutlierDetectionMatrix.py", line 46, in runProgram
+    maxIn = int(input("How many asteroids do you want to look at(-1 if all): "))
+EOFError
+>>> SNAPS Menu
+1. Run program
+2. View specific asteroid
+3. Help
+4. Quit
+1
+How many asteroids do you want to look at(-1 if all): 30
+Where to start in data:(-1 if random):  10002
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/home/sjc497/astroInfoResearch/astroInfo/newOutlierDetectionMatrix.py", line 445, in <module>
+    runProgram()
+  File "/home/sjc497/astroInfoResearch/astroInfo/newOutlierDetectionMatrix.py", line 112, in runProgram
+    obj_stdev = stat.stdev(asteroid[feature])
+  File "/home/sjc497/.conda/envs/astroEnv/lib/python3.10/statistics.py", line 828, in stdev
+    var = variance(data, xbar)
+  File "/home/sjc497/.conda/envs/astroEnv/lib/python3.10/statistics.py", line 767, in variance
+    raise StatisticsError('variance requires at least two data points')
+statistics.StatisticsError: variance requires at least two data points
+>>> SNAPS Menu
+1. Run program
+2. View specific asteroid
+3. Help
+4. Quit
+1
+How many asteroids do you want to look at(-1 if all): 20
+Where to start in data:(-1 if random):  100
+     Name     elong     ZTF-ELONG        rb        ZTF-RB         H         ZTF-H  mag18omag8 ZTF-MAG18OMAG8    Row Sum  Abs Row Sum
+0   78682  2.093391  ZTF18acwundd  2.261954  ZTF20aaplisu  1.976682  ZTF20aapzgis    2.493382   ZTF19aaazxpl   8.825410     8.825410
+1    7471  2.181594  ZTF18abzbebi  0.000000  ZTF19aaewlmc  1.634158  ZTF19aalyijm    3.568758   ZTF18acyqilu   5.493826     9.275196
+2   75504  2.752453  ZTF18acwukjz  0.000000  ZTF18achupor  1.624053  ZTF18acxhzeh    3.661601   ZTF18acnmiyc   6.294948     9.781267
+3    8302  2.698151  ZTF20aauqfkn  2.365536  ZTF20aavbrdv  1.537750  ZTF18acvebsj    4.045875   ZTF17aaanmfc  10.647313    10.647313
+4    7273  2.701413  ZTF20abahwhv  0.000000  ZTF18abxioiw  1.655095  ZTF18abxvzcs    3.558244   ZTF18abxioiw   5.517591    10.311912
+5     740  2.915421  ZTF20aawdqeo  0.000000  ZTF20aawdqeo  2.459228  ZTF19acmwvau    3.393500   ZTF20aaunniz   6.683100    10.853198
+6    7271  2.824703  ZTF18acclspo  2.144080  ZTF20aaovwaf  1.476619  ZTF20aasyqxg    2.900651   ZTF18acnmqmv   9.346053     9.346053
+7   77785  2.643678  ZTF18acuydiq  2.478779  ZTF20aaseddk  1.868061  ZTF20aaayiwz    2.657892   ZTF18acbvepc   9.648410     9.648410
+8   82667  3.110808  ZTF18abotfhh  2.022171  ZTF20aaqgupd  1.737698  ZTF18acrvyah    2.270929   ZTF18acageza   9.141606     9.141606
+9    8168  3.251739  ZTF20aanlhvo  0.000000  ZTF19aceijkv  1.872337  ZTF19aceucfx    2.980675   ZTF19abyueem   5.966296    10.243206
+10   7781  2.667450  ZTF18abzbnyw -2.275387  ZTF18aclnfyz -1.989268  ZTF19aaqazfv    2.595698   ZTF18acmhhgx   0.998493     9.527803
+11  75476  2.812799  ZTF18accccpm  0.000000  ZTF18acvqbwt  2.163243  ZTF18acctupb    2.708858   ZTF18achcyui   5.936564     9.433237
+12  81583  3.268119  ZTF18ablwwwt  0.000000  ZTF18abjqnjy  2.196687  ZTF19abxjsxt    3.831299   ZTF20aaomemo   7.358958    11.233250
+13   7348  3.144736  ZTF18aceodvg  0.000000  ZTF18absczlb  1.512215  ZTF18acccfss    3.553832   ZTF18acualqi   6.167634    10.253932
+14   7232  2.507115  ZTF18accuwrw  2.253140  ZTF20aatsnfw  1.902678  ZTF20aayahxd    3.240332   ZTF18abxjcbn   9.903265     9.903265
+15   7056  2.798712  ZTF18abzzdfi  1.891662  ZTF20aavqdaw  2.017159  ZTF20aaoypcl    3.703310   ZTF18actavxj  10.410844    10.410844
+16   7258  2.637686  ZTF18acctzna  0.000000  ZTF19aanvnbf  2.756835  ZTF18abondtk    2.983062   ZTF18adaseww   6.214476    10.540688
+17  71848  3.296518  ZTF18acctuli  2.067997  ZTF20aaxvzyi  1.548433  ZTF18acvqatv    3.009824   ZTF18acvqrcx   9.922772     9.922772
+18  71192  3.312189  ZTF19aabbtbs  2.196397  ZTF20aauvdzd  1.582764  ZTF18acctpay    4.001612   ZTF18acpughp  11.092963    11.092963
+19   7102  4.105670  ZTF18abumjpi  0.000000  ZTF19aakpllp  2.148883  ZTF20aaqivgg    4.700375   ZTF18abxeknr   8.110562    13.799295
+Look at total data histogram (y/n): n
+Enter feature to filter by('n' if None): 
+rb
+High Limit( Data > limit): 
+-3
+Low limit( Data < Limit): 
+0
+     Name     elong     ZTF-ELONG        rb        ZTF-RB         H         ZTF-H  mag18omag8 ZTF-MAG18OMAG8   Row Sum  Abs Row Sum
+1    7471  2.181594  ZTF18abzbebi  0.000000  ZTF19aaewlmc  1.634158  ZTF19aalyijm    3.568758   ZTF18acyqilu  5.493826     9.275196
+2   75504  2.752453  ZTF18acwukjz  0.000000  ZTF18achupor  1.624053  ZTF18acxhzeh    3.661601   ZTF18acnmiyc  6.294948     9.781267
+4    7273  2.701413  ZTF20abahwhv  0.000000  ZTF18abxioiw  1.655095  ZTF18abxvzcs    3.558244   ZTF18abxioiw  5.517591    10.311912
+5     740  2.915421  ZTF20aawdqeo  0.000000  ZTF20aawdqeo  2.459228  ZTF19acmwvau    3.393500   ZTF20aaunniz  6.683100    10.853198
+9    8168  3.251739  ZTF20aanlhvo  0.000000  ZTF19aceijkv  1.872337  ZTF19aceucfx    2.980675   ZTF19abyueem  5.966296    10.243206
+10   7781  2.667450  ZTF18abzbnyw -2.275387  ZTF18aclnfyz -1.989268  ZTF19aaqazfv    2.595698   ZTF18acmhhgx  0.998493     9.527803
+11  75476  2.812799  ZTF18accccpm  0.000000  ZTF18acvqbwt  2.163243  ZTF18acctupb    2.708858   ZTF18achcyui  5.936564     9.433237
+12  81583  3.268119  ZTF18ablwwwt  0.000000  ZTF18abjqnjy  2.196687  ZTF19abxjsxt    3.831299   ZTF20aaomemo  7.358958    11.233250
+13   7348  3.144736  ZTF18aceodvg  0.000000  ZTF18absczlb  1.512215  ZTF18acccfss    3.553832   ZTF18acualqi  6.167634    10.253932
+16   7258  2.637686  ZTF18acctzna  0.000000  ZTF19aanvnbf  2.756835  ZTF18abondtk    2.983062   ZTF18adaseww  6.214476    10.540688
+19   7102  4.105670  ZTF18abumjpi  0.000000  ZTF19aakpllp  2.148883  ZTF20aaqivgg    4.700375   ZTF18abxeknr  8.110562    13.799295
+Enter feature to filter by('n' if None): 
+rb
+High Limit( Data > limit): 
+-3
+Low limit( Data < Limit): 
+-1
+    Name    elong     ZTF-ELONG        rb        ZTF-RB         H         ZTF-H  mag18omag8 ZTF-MAG18OMAG8   Row Sum  Abs Row Sum
+10  7781  2.66745  ZTF18abzbnyw -2.275387  ZTF18aclnfyz -1.989268  ZTF19aaqazfv    2.595698   ZTF18acmhhgx  0.998493     9.527803
+Enter feature to filter by('n' if None): 
+n
+Inspect Specific Asteroid(y/n): y
+Asteroid Name:
+7781
+Asteroid 7781 Stats:
+
+qt.qpa.xcb: X server does not support XInput 2
+failed to get the current screen resources
+Show all plots? (y/n): qt.qpa.xcb: QXcbConnection: XCB error: 1 (BadRequest), sequence: 165, resource id: 62, major code: 130 (Unknown), minor code: 47
+qt.qpa.xcb: QXcbConnection: XCB error: 170 (Unknown), sequence: 180, resource id: 62, major code: 146 (Unknown), minor code: 20
+n
+SNAPS Menu
+1. Run program
+2. View specific asteroid
+3. Help
+4. Quit
+4
+
+Process Python finished
