@@ -13,7 +13,7 @@ import asteroidMenuClass as menu
 dest = "mongodb://schappus:unicornsSUM22@cmp4818.computers.nau.edu:27017"
 client = MongoClient(dest)
 db = client.ztf
-ztf_series_data = db['mag18o8_ss1']
+mag18Data = db['mag18o8'] # changed from mag18o8 on 3.4.23
 asteroid_data = db['asteroids_all']
 
 # GLOBAL VARS
@@ -55,9 +55,7 @@ def help():
 
 
 # exportFile: takes no inputs, exports data to either .html or .csv
-def exportFile(data):
-    fileType =  int(input("Export as \n 1. .html \n 2. .csv \n"))
-    filename = input("filename: ")
+def exportFile(fileType, filename, data):
     print("Exporting data...\n")
 
     if fileType == 1:
@@ -87,14 +85,17 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix):
 
         # grab feature data and calculate mean and standard deviation
         feature = wanted_attr[attr_ct]
-        obj_stdev = stat.stdev(asteroid[feature])
-        obj_mean = stat.mean(asteroid[feature])
-
+        try: 
+            obj_stdev = stat.stdev(asteroid[feature])
+            obj_mean = stat.mean(asteroid[feature])
+        except Exception as e:
+            print((name + " is the object causing error"), e)
+            
         # grab weight for feature
         attr_weight = weightDict[feature]
 
         # sort specific asteroid data by feature
-        dataSortedByFeature = pd.DataFrame(ztf_series_data.find({"ssnamenr": int(name)}).sort(feature))
+        dataSortedByFeature = pd.DataFrame(mag18Data.find({"ssnamenr": int(name)}).sort(feature))
 
 
         # calculate min, max, and ranges for highSigma and lowSigma values
@@ -176,12 +177,9 @@ def runProgram():
 
     if ( maxIn < 0 ) :
         maxIn = asteroid_data.count()
-        allAstDecision = input("This will run all 32k+ asteroids through the system. What would you like to do? \n\
-        1. Run and display output on screen \n\
-        2. Run and export output to file \n\
-        3. Cancel ")
+        allAstDecision = input("This will run all 32k+ asteroids through the system. What would you like to do? \n 1. Run and display output on screen \n 2. Run and export output to file \n 3. Cancel \n")
         if allAstDecision == 3:
-            return
+            main()
         if allAstDecision == 2:
             exportFlg = 'y'
              
@@ -194,6 +192,9 @@ def runProgram():
         
     exportFlg = input("Would you like to export the results (y/n)? ")
 
+    if exportFlg == 'y':
+        fileType =  int(input("Export as \n 1. .html \n 2. .csv \n"))
+        filename = input("filename: ")
 
     # num of asteroids we have looked at 
     ast_ct = 0
@@ -201,20 +202,8 @@ def runProgram():
     # divider line for output
     divider = ("_" * 120)
 
-    #weights for features
-    # weightDict  = {
-    #   "H": 1,
-    #   "mag18omag8": 1,
-    #   "elong": 1,
-    #   "rb": 1
-    # }
-
     # get all asteroid names
     asteroidNames = pd.DataFrame(asteroid_data.find({},{ '_id': 0, 'ssnamenr' : 1}))
-
-    # # attributes we look at
-    # wanted_attr = [ "elong", "rb", "H", "mag18omag8" ]
-    # numFeatures = len(wanted_attr)
 
     # # list for associated ztf id for observation
     # antIDS = list()
@@ -249,7 +238,7 @@ def runProgram():
             # needs to take an asteroid as parameter
 
             # sort specific asteroid data by Julian Date
-        asteroid = pd.DataFrame(ztf_series_data.find({"ssnamenr": int(name)}).sort("jd"))
+        asteroid = pd.DataFrame(mag18Data.find({"ssnamenr": int(name)}).sort("jd"))
         attrData, nightData = fillSigmaMatrix(name, asteroid, sigmaMatrix)
         
 
@@ -305,7 +294,7 @@ def runProgram():
 
     # EXPORT
     if exportFlg == 'y':
-        exportFile(dataset)
+        exportFile(fileType, filename, dataset)
     else:
         print(dataset)
     
@@ -434,7 +423,7 @@ def runProgram():
 def viewOne():
     astName = input("Asteroid Name:\n")
     clear(10)
-    asteroid = pd.DataFrame(ztf_series_data.find({"ssnamenr": int(astName)}).sort("jd"))
+    asteroid = pd.DataFrame(mag18Data.find({"ssnamenr": int(astName)}).sort("jd"))
 
     menu2Dict = {0: 'Inspect Asteroid ' + str(astName) + ":",
                  1: 'View asteroid data',
