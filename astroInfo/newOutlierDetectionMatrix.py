@@ -31,6 +31,7 @@ histograms of all the sigma data and scatterplots for individual asteroids."
 offset = 0 # for shifting data scope
 wanted_attr = [ "elong", "rb", "H", "mag18omag8" ] # attributes we want to look at
 numFeatures = len(wanted_attr)
+filterLevel = 1 # default filtering intensity (none)
 antIDS = list() # list for associated ztf id for observation
 weightDict  = {
     "H": 1,
@@ -63,11 +64,20 @@ def exportFile(fileType, filename, data):
     if fileType == 2:
         data.to_csv(filename, index=False)
 
+# function for stripping data of all 0 entries
+def stripZeros(data):
+    dataStrip = data.drop(data[data['rb'] == 0].index)
+    dataStrip = dataStrip.drop(dataStrip[dataStrip['elong'] == 0].index)
+    dataStrip = dataStrip.drop(dataStrip[dataStrip['H'] == 0].index)
+    dataStrip = dataStrip.drop(dataStrip[dataStrip['mag18omag8'] == 0].index)
+    return dataStrip
+    
+
     
 # fillSigmaMatrix: takes the name of an asteroid, its datatable, and an empty matrix to
 # fill with sigma data. Computes sigmas for each attribute and stores them in the matrix.
 # Returns the sigma matrix and data regarding the night of each observation's max sigma value
-def fillSigmaMatrix(name, asteroid, sigmaMatrix):
+def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
     #sigmaMatrix = np.zeros([1, numFeatures + 2]) # two allows for row sum & absolute row sum
         
     attrData = []
@@ -150,7 +160,7 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix):
     ####
     rowAttrs = []
     for night in range(len(nightData)):
-        if nightData.count(nightData[night]) >= 2:
+        if nightData.count(nightData[night]) >= filterLevel:
             rowAttrs.append(attrData[night])
         else:
             rowAttrs.append(0)
@@ -196,6 +206,9 @@ def runProgram():
         fileType =  int(input("Export as \n 1. .html \n 2. .csv \n"))
         filename = input("filename: ")
 
+
+    filterLevel = int(input("Select level of intensity of filtering: \n 1. None \n 2. Low \n 3. Medium \n 4. High \n"))
+        
     # num of asteroids we have looked at 
     ast_ct = 0
 
@@ -239,26 +252,26 @@ def runProgram():
 
             # sort specific asteroid data by Julian Date
         asteroid = pd.DataFrame(mag18Data.find({"ssnamenr": int(name)}).sort("jd"))
-        attrData, nightData = fillSigmaMatrix(name, asteroid, sigmaMatrix)
+        attrData, nightData = fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel)
         
 
         # append attributes to attrData only if multiple occur on same night
-        rowAttrs = []
-        for night in range(len(nightData)):
-            if nightData.count(nightData[night]) >= 2:
-                rowAttrs.append(attrData[night])
-            else:
-                rowAttrs.append(0)
+        # rowAttrs = []
+        # for night in range(len(nightData)):
+        #     if nightData.count(nightData[night]) >= 2:
+        #         rowAttrs.append(attrData[night])
+        #     else:
+        #         rowAttrs.append(0)
 
-        # append row sums to sigmaMatrix
-        rowSum = attrData[len(attrData) - 2]
-        absRowSum = attrData[len(attrData) - 1]
-        rowAttrs.append(rowSum)
-        rowAttrs.append(absRowSum)
-        #sigmaMatrix[ast_ct][attr_ct] = rowSum
-        #sigmaMatrix[ast_ct][attr_ct + 1] = absRowSum
-     
-        sigmaMatrix[ast_ct] = rowAttrs
+        # # append row sums to sigmaMatrix
+        # rowSum = attrData[len(attrData) - 2]
+        # absRowSum = attrData[len(attrData) - 1]
+        # rowAttrs.append(rowSum)
+        # rowAttrs.append(absRowSum)
+        # #sigmaMatrix[ast_ct][attr_ct] = rowSum
+        # #sigmaMatrix[ast_ct][attr_ct + 1] = absRowSum
+
+        sigmaMatrix[ast_ct] = attrData
 
         # update asteroid count
         ast_ct += 1
@@ -293,10 +306,11 @@ def runProgram():
 
 
     # EXPORT
+    newData = stripZeros(dataset)
     if exportFlg == 'y':
-        exportFile(fileType, filename, dataset)
+        exportFile(fileType, filename, newData)
     else:
-        print(dataset)
+        print(newData)
     
 
     #### UNCOMMENT THIS!!!!! ####
@@ -387,11 +401,11 @@ def runProgram():
         continueFlag = (filterInput != 'n')
 
         if ( continueFlag ):
-            filterHighLimit = int(input("High Limit( Data > limit): \n"))
-            filterLowLimit = int(input("Low limit( Data < Limit): \n"))
+            filterHighLimit = int(input("Data >  "))
+            filterLowLimit = int(input("Data <  "))
 
             prevSet = filteredDataset
-            filteredDataset = filteredDataset.loc[ ( filteredDataset[ filterInput ] >= filterHighLimit ) & ( filteredDataset[ filterInput ] <= filterLowLimit ) ]
+            filteredDataset = filteredDataset.loc[ ( filteredDataset[ filterInput ] > filterHighLimit ) & ( filteredDataset[ filterInput ] < filterLowLimit ) ]
             emptyFlag = filteredDataset.empty
 
             if ( not emptyFlag ):
@@ -443,7 +457,8 @@ def viewOne():
             astSigmaMatrix = np.zeros([1, numFeatures + 2])
             nightData = []
             #viewAsteroidData()
-            sigmaMatrix, nightData = fillSigmaMatrix(astName, asteroid, astSigmaMatrix)
+            fltrLvl = 1
+            sigmaMatrix, nightData = fillSigmaMatrix(astName, asteroid, astSigmaMatrix, fltrLvl)
             print(sigmaMatrix)
             print(nightData)
             #print("RB: " + str(asteroid["rb"]) + "\n")
