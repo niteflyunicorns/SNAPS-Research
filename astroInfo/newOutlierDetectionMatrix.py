@@ -131,10 +131,13 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
         highSigma = upperRange / obj_stdev
         lowSigma = lowerRange / obj_stdev
 
+        #if (name == "117581"):
+            #pdb.set_trace()
+        
         # add data to sigmaMatrix
         if (highSigma > lowSigma):
             # night of obs. used to determine if multiple anomalies occur simultaneously
-            night = asteroid["night"][maxIndex]
+            night = dataSortedByFeature["night"][maxIndex]
 
             #sigmaMatrix[ast_ct][attr_ct] = highSigma * attr_weight
             rowSum += highSigma * attr_weight
@@ -162,8 +165,7 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
     ####
     rowAttrs = []
 
-    if (name == "117581"):
-        pdb.set_trace()
+
 
     #print("Night Data: " + str(nightData))
     for night in range(len(nightData)):
@@ -444,12 +446,11 @@ def runProgram():
 ###########################################################################################
 def viewOne():
     astName = input("Asteroid Name:\n")
-    maxIn = asteroid_data.count()
-    asteroidNames = pd.DataFrame(asteroid_data.find({},{ '_id': 0, 'ssnamenr' : 1}))
-    asteroidNames.to_html("astNames.html")
-    location = asteroidNames.loc[astName]
-    print("LOCATION: \n")
-    print(location)
+    #asteroidNames = pd.DataFrame(asteroid_data.find({},{ '_id': 0, 'ssnamenr' : 1}))
+    #asteroidNames.to_html("astNames.html")
+    #location = asteroidNames.index.get_loc(int(astName))
+    #print("LOCATION: \n")
+    #print(location)
     clear(10)
     asteroid = pd.DataFrame(mag18Data.find({"ssnamenr": int(astName)}).sort("jd"))
 
