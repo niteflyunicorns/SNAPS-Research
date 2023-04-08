@@ -8,6 +8,7 @@ import numpy as np
 import random as rand
 import sys
 import asteroidMenuClass as menu
+import pdb
 
 # Connecting to mongo database and obtain data
 dest = "mongodb://schappus:unicornsSUM22@cmp4818.computers.nau.edu:27017"
@@ -79,7 +80,8 @@ def stripZeros(data):
 # Returns the sigma matrix and data regarding the night of each observation's max sigma value
 def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
     #sigmaMatrix = np.zeros([1, numFeatures + 2]) # two allows for row sum & absolute row sum
-        
+
+    
     attrData = []
     nightData = []
 
@@ -159,12 +161,18 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
 
     ####
     rowAttrs = []
+
+    if (name == "117581"):
+        pdb.set_trace()
+
+    #print("Night Data: " + str(nightData))
     for night in range(len(nightData)):
         if nightData.count(nightData[night]) >= filterLevel:
             rowAttrs.append(attrData[night])
+            #print("Night " + str(nightData[night]))
         else:
             rowAttrs.append(0)
-
+    #print("Row Attrs: " + str(rowAttrs))
     # append row sums to sigmaMatrix
     rowAttrs.append(rowSum)
     rowAttrs.append(absRowSum)
@@ -436,6 +444,12 @@ def runProgram():
 ###########################################################################################
 def viewOne():
     astName = input("Asteroid Name:\n")
+    maxIn = asteroid_data.count()
+    asteroidNames = pd.DataFrame(asteroid_data.find({},{ '_id': 0, 'ssnamenr' : 1}))
+    asteroidNames.to_html("astNames.html")
+    location = asteroidNames.loc[astName]
+    print("LOCATION: \n")
+    print(location)
     clear(10)
     asteroid = pd.DataFrame(mag18Data.find({"ssnamenr": int(astName)}).sort("jd"))
 
@@ -457,7 +471,7 @@ def viewOne():
             astSigmaMatrix = np.zeros([1, numFeatures + 2])
             nightData = []
             #viewAsteroidData()
-            fltrLvl = 1
+            fltrLvl = int(input("Filter Intensity (1: none, 2: low, 3: med, 4: high): "))
             sigmaMatrix, nightData = fillSigmaMatrix(astName, asteroid, astSigmaMatrix, fltrLvl)
             print(sigmaMatrix)
             print(nightData)
