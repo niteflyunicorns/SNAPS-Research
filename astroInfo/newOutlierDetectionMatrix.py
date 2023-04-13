@@ -41,7 +41,6 @@ weightDict  = {
     "rb": 1
 }
 
-
 # FUNCTION DEFINITIONS
 
 # clear: takes numerical input and prints that many new lines
@@ -165,7 +164,7 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
     ####
     rowAttrs = []
 
-
+    #pdb.set_trace()
 
     #print("Night Data: " + str(nightData))
     for night in range(len(nightData)):
@@ -482,11 +481,96 @@ def viewOne():
             # print outliers for each attribute
             # print nights that each outlier occurred
             # print ZTF id for each outlier's observation
-            pass
+
+
+            # settup for printing all plots later...
+            astDataFigs, ((plt1, plt2), (plt3, plt4)) = plt.subplots(2, 2, figsize=(15,15))
+            astDataFigs.suptitle("Asteroid " + astName)
+
+            # rb vs. Julian Date scatterplot
+            plt1.scatter(asteroid["jd"], asteroid['rb'], color = 'deeppink')
+            plt1.set(xlabel = "jd", ylabel = "rb")
+            # plt.scatter(asteroid["jd"], asteroid['rb'], color = 'deeppink')
+            # plt.xlabel("jd")
+            # plt.ylabel("rb")
+            # plt.show()
+
+            # mag18omag8 vs. Julian Date scatterplot
+            plt2.scatter(asteroid["jd"], asteroid['mag18omag8'], color = 'gold')
+            plt2.set(xlabel = "jd", ylabel = "mag18omag8")
+            # plt.scatter(asteroid["jd"], asteroid['mag18omag8'], color = 'gold')
+            # plt.xlabel("jd")
+            # plt.ylabel("mag18omag8")
+            # plt.show()
+
+            # elong vs. Julian Date scatterplot
+            plt3.scatter(asteroid["jd"], asteroid['elong'], color = 'blue')
+            plt3.set(xlabel = "jd", ylabel = "elong")
+            # plt.scatter(asteroid["jd"], asteroid['elong'], color = 'blue')
+            # plt.xlabel("jd")
+            # plt.ylabel("elong")
+            # plt.show()
+
+            # H vs. Julian Date scatterplot
+            fidFiltered = asteroid.loc[ (asteroid["fid"] == 1) ]
+            plt4.scatter(fidFiltered["jd"], fidFiltered['H'], color = 'green')
+            fidFiltered = asteroid.loc[ (asteroid["fid"] == 2) ]
+            plt4.scatter(fidFiltered["jd"], fidFiltered['H'], color = 'red')
+            plt4.set(xlabel = "jd", ylabel = "H")
+
+            # plt.scatter(fidFiltered["jd"], fidFiltered['H'], color = 'red')
+            # plt.xlabel("jd")
+            # plt.ylabel("H")
+            # plt.show()
+
+            savefile = "ast-" + astName + "-dataplots.png"
+            astDataFigs.savefig(savefile)
+            astDataFigs.show()
+
+            if ( input("Show all plots? (y/n): ") == 'y'):
+
+                astDataAllFigs, ((plt1, plt2, plt3), (plt4, plt5, plt6)) = plt.subplots(2, 3, figsize=(15,15))
+                astDataAllFigs.suptitle("Asteroid " + astName)
+
+                # mag18omag8 vs. rb scatterplot
+                plt1.scatter(asteroid["mag18omag8"], asteroid['rb'], color = 'darkorange')
+                plt1.set(xlabel = "mag18omag8", ylabel = "rb", title = "mag18omag8 vs. rb")
+
+                # mag18omag8 vs. elong scatterplot
+                plt2.scatter(asteroid["mag18omag8"], asteroid['elong'], color = 'mediumaquamarine')
+                plt2.set(xlabel = "mag18omag8", ylabel = "elong", title = "mag18omag8 vs. elong")
+
+                # mag18omag8 vs. H scatterplot
+                fidFiltered = asteroid.loc[ (asteroid["fid"] == 1) ]
+                plt3.scatter(fidFiltered["mag18omag8"], fidFiltered['H'], color = 'limegreen')
+                fidFiltered = asteroid.loc[ (asteroid["fid"] == 2) ]
+                plt3.scatter(fidFiltered["mag18omag8"], fidFiltered['H'], color = 'tomato')
+                plt3.set(xlabel = "mag18omag8", ylabel = "H", title = "mag18omag8 vs. H")
+
+                # rb vs. elong scatterplot
+                plt4.scatter(asteroid["rb"], asteroid['elong'], color = 'forestgreen')
+                plt4.set(xlabel = "rb", ylabel = "elong", title = "rb vs. elong")
+
+                # rb vs. H scatterplot
+                fidFiltered = asteroid.loc[ (asteroid["fid"] == 1) ]
+                plt5.scatter(fidFiltered["rb"], fidFiltered['H'], color = 'darkgreen')
+                fidFiltered = asteroid.loc[ (asteroid["fid"] == 2) ]
+                plt5.scatter(fidFiltered["rb"], fidFiltered['H'], color = 'darkred')
+                plt5.set(xlabel = "rb", ylabel = "H", title = "rb vs. H")
+
+                # elong vs. H scatterplot
+                fidFiltered = asteroid.loc[ (asteroid["fid"] == 1) ]
+                plt6.scatter(fidFiltered["elong"], fidFiltered['H'], color = 'seagreen')
+                fidFiltered = asteroid.loc[ (asteroid["fid"] == 2) ]
+                plt6.scatter(fidFiltered["elong"], fidFiltered['H'], color = 'firebrick')
+                plt6.set(xlabel = "elong", ylabel = "H", title = "elong vs. H")
+
+
+            #plt.show()
+
         elif menu2Choice == 2:
             #saveData(dataToSave)
             print("save all data\n")
-            pass
         elif menu2Choice == 3:
             #runFiltering()
             print("run filtering system on individual asteroid observation data")
@@ -497,86 +581,6 @@ def viewOne():
             exit()
 
 
-    # settup for printing all plots later...
-    astDataFigs, ((plt1, plt2), (plt3, plt4)) = plt.subplots(2, 2, figsize=(15,15))
-    astDataFigs.suptitle("Asteroid " + astName)
-    
-    # rb vs. Julian Date scatterplot
-    plt1.scatter(asteroid["jd"], asteroid['rb'], color = 'deeppink')
-    plt1.set(xlabel = "jd", ylabel = "rb")
-    # plt.scatter(asteroid["jd"], asteroid['rb'], color = 'deeppink')
-    # plt.xlabel("jd")
-    # plt.ylabel("rb")
-    # plt.show()
-    
-    # mag18omag8 vs. Julian Date scatterplot
-    plt2.scatter(asteroid["jd"], asteroid['mag18omag8'], color = 'gold')
-    plt2.set(xlabel = "jd", ylabel = "mag18omag8")
-    # plt.scatter(asteroid["jd"], asteroid['mag18omag8'], color = 'gold')
-    # plt.xlabel("jd")
-    # plt.ylabel("mag18omag8")
-    # plt.show()
-    
-    # elong vs. Julian Date scatterplot
-    plt3.scatter(asteroid["jd"], asteroid['elong'], color = 'blue')
-    plt3.set(xlabel = "jd", ylabel = "elong")
-    # plt.scatter(asteroid["jd"], asteroid['elong'], color = 'blue')
-    # plt.xlabel("jd")
-    # plt.ylabel("elong")
-    # plt.show()
-    
-    # H vs. Julian Date scatterplot
-    fidFiltered = asteroid.loc[ (asteroid["fid"] == 1) ]
-    plt4.scatter(fidFiltered["jd"], fidFiltered['H'], color = 'green')
-    fidFiltered = asteroid.loc[ (asteroid["fid"] == 2) ]
-    plt4.scatter(fidFiltered["jd"], fidFiltered['H'], color = 'red')
-    plt4.set(xlabel = "jd", ylabel = "H")
-    
-    # plt.scatter(fidFiltered["jd"], fidFiltered['H'], color = 'red')
-    # plt.xlabel("jd")
-    # plt.ylabel("H")
-    # plt.show()
-    
-    if ( input("Show all plots? (y/n): ") == 'y'):
-
-        astDataAllFigs, ((plt1, plt2, plt3), (plt4, plt5, plt6)) = plt.subplots(2, 3, figsize=(15,15))
-        astDataAllFigs.suptitle("Asteroid " + astName)
-        
-        # mag18omag8 vs. rb scatterplot
-        plt1.scatter(asteroid["mag18omag8"], asteroid['rb'], color = 'darkorange')
-        plt1.set(xlabel = "mag18omag8", ylabel = "rb", title = "mag18omag8 vs. rb")
-        
-        # mag18omag8 vs. elong scatterplot
-        plt2.scatter(asteroid["mag18omag8"], asteroid['elong'], color = 'mediumaquamarine')
-        plt2.set(xlabel = "mag18omag8", ylabel = "elong", title = "mag18omag8 vs. elong")
-        
-        # mag18omag8 vs. H scatterplot
-        fidFiltered = asteroid.loc[ (asteroid["fid"] == 1) ]
-        plt3.scatter(fidFiltered["mag18omag8"], fidFiltered['H'], color = 'limegreen')
-        fidFiltered = asteroid.loc[ (asteroid["fid"] == 2) ]
-        plt3.scatter(fidFiltered["mag18omag8"], fidFiltered['H'], color = 'tomato')
-        plt3.set(xlabel = "mag18omag8", ylabel = "H", title = "mag18omag8 vs. H")
-        
-        # rb vs. elong scatterplot
-        plt4.scatter(asteroid["rb"], asteroid['elong'], color = 'forestgreen')
-        plt4.set(xlabel = "rb", ylabel = "elong", title = "rb vs. elong")
-        
-        # rb vs. H scatterplot
-        fidFiltered = asteroid.loc[ (asteroid["fid"] == 1) ]
-        plt5.scatter(fidFiltered["rb"], fidFiltered['H'], color = 'darkgreen')
-        fidFiltered = asteroid.loc[ (asteroid["fid"] == 2) ]
-        plt5.scatter(fidFiltered["rb"], fidFiltered['H'], color = 'darkred')
-        plt5.set(xlabel = "rb", ylabel = "H", title = "rb vs. H")
-        
-        # elong vs. H scatterplot
-        fidFiltered = asteroid.loc[ (asteroid["fid"] == 1) ]
-        plt6.scatter(fidFiltered["elong"], fidFiltered['H'], color = 'seagreen')
-        fidFiltered = asteroid.loc[ (asteroid["fid"] == 2) ]
-        plt6.scatter(fidFiltered["elong"], fidFiltered['H'], color = 'firebrick')
-        plt6.set(xlabel = "elong", ylabel = "H", title = "elong vs. H")
-
-
-    #plt.show()
 
 
 ## MAIN PROGRAM:
