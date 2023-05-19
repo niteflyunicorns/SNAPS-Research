@@ -48,12 +48,14 @@ weightDict  = {
 def clear(size):
     print("\n" * size)
 
-
 # help: takes no inputs, prints help message
 def help():
     print(useMsg)
     clear(1)
 
+# leave: takes no inputs, prints exit message & ends program
+def leave():
+    print("Thank you for using SNAPS!\n")
 
 # exportFile: takes no inputs, exports data to either .html or .csv
 def exportFile(fileType, filename, data):
@@ -78,17 +80,53 @@ def stripZeros(data, fltrLvl):
         return []
     return data
     
-
+# formatDataTable: takes in sigma matrix, antares IDs array, asteroid name array,
+# number of asteroids, and number of features and formats the sigma matrix into
+# a more reader-friendly table with headers
+def formatDataTable(sigmaMatrix, antIDS, nameArray, maxIn, numFeatures):
+    listNames = []
+    idArray = []
+    listNames= np.array( antIDS )
+    idArray = np.reshape(listNames, (maxIn, numFeatures))
+    if maxIn != 1:
+        dataset = pd.DataFrame(
+            {'Name': nameArray,
+             'elong': sigmaMatrix[:, 0],
+             'ZTF-ELONG': idArray[:, 0],
+             'rb': sigmaMatrix[:, 1],
+             'ZTF-RB': idArray[:, 1],
+             'H': sigmaMatrix[:, 2],
+             'ZTF-H': idArray[:, 2],
+             'mag18omag8': sigmaMatrix[:, 3],
+             'ZTF-MAG18OMAG8': idArray[:, 3],
+             'Row Sum': sigmaMatrix[:, 4],
+             'Abs Row Sum': sigmaMatrix[:, 5]
+            })
+    if maxIn == 1:
+        dataset = pd.DataFrame(
+            {'Name': nameArray,
+             'elong': sigmaMatrix[0],
+             'ZTF-ELONG': idArray[:, 0],
+             'rb': sigmaMatrix[1],
+             'ZTF-RB': idArray[:, 1],
+             'H': sigmaMatrix[2],
+             'ZTF-H': idArray[:, 2],
+             'mag18omag8': sigmaMatrix[3],
+             'ZTF-MAG18OMAG8': idArray[:, 3],
+             'Row Sum': sigmaMatrix[4],
+             'Abs Row Sum': sigmaMatrix[5]
+            })
+        
+    return dataset
     
-# fillSigmaMatrix: takes the name of an asteroid, its datatable, and an empty matrix to
+# fillSigmaMatrix: takes the name of an asteroid, its data table, and an empty matrix to
 # fill with sigma data. Computes sigmas for each attribute and stores them in the matrix.
 # Returns the sigma matrix and data regarding the night of each observation's max sigma value
-def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
+def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel, outFlag):
     #sigmaMatrix = np.zeros([1, numFeatures + 2]) # two allows for row sum & absolute row sum
-
-    
     attrData = []
     nightData = []
+    outliers = []
     #antIDS = []
 
     # grab asteroid name
@@ -166,6 +204,7 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
             # keep track of ant id with specific observation
             antIDS.append(dataSortedByFeature['id'][maxIndex])
             attrData.append(highSigma * attr_weight)
+            outliers.append(maxVal)
 
         else:
             night = dataSortedByFeature["night"][minIndex]
@@ -176,6 +215,7 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
             # keep track of ant id with specific observation
             antIDS.append(dataSortedByFeature['id'][minIndex])
             attrData.append(-lowSigma * attr_weight)
+            outliers.append(minVal)
 
         # update attribute count
         attr_ct += 1
@@ -214,6 +254,9 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
     sigmaMatrix = rowAttrs
     if numZeros >= filterLevel:
         sigmaMatrix = []
+
+    if outFlag:
+        return (sigmaMatrix, nightData, outliers)
 
     return (sigmaMatrix, nightData)
 
@@ -297,7 +340,7 @@ def runProgram():
 
             # sort specific asteroid data by Julian Date
         asteroid = pd.DataFrame(mag18Data.find({"ssnamenr": int(name)}).sort("jd"))
-        attrData, nightData = fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel)
+        attrData, nightData = fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel, False)
         
 
         # append attributes to attrData only if multiple occur on same night
@@ -333,31 +376,12 @@ def runProgram():
         
     # Formatting data structures
     nameArray = np.array( asteroidNames['ssnamenr'])[offset: offset + ast_ct]
-    listNames= np.array( antIDS )
-    idArray = np.reshape(listNames, (maxIn, numFeatures))
+
+    dataset = formatDataTable(sigmaMatrix, antIDS, nameArray, maxIn, numFeatures)
 
     # clear antIDS for next use
     antIDS.clear()
 
-
-    #sigmaMatrix = sigmaMatrix[~np.all(sigmaMatrix == 0, axis=1)]
-    #print(sigmaMatrix)
-    # DataFrame creation for main data display
-    dataset = pd.DataFrame(
-        {'Name': nameArray,
-         'elong': sigmaMatrix[:, 0],
-         'ZTF-ELONG': idArray[:, 0],
-         'rb': sigmaMatrix[:, 1],
-         'ZTF-RB': idArray[:, 1],
-         'H': sigmaMatrix[:, 2],
-         'ZTF-H': idArray[:, 2],
-         'mag18omag8': sigmaMatrix[:, 3],
-         'ZTF-MAG18OMAG8': idArray[:, 3],
-         'Row Sum': sigmaMatrix[:, 4],
-         'Abs Row Sum': sigmaMatrix[:, 5]
-        })
-
-        
     # User Testing:
     # if allAstDecision == 1:
     #     print(dataset)
@@ -525,18 +549,42 @@ def viewOne():
             print("Asteroid " + astName + " Stats:\n")
             astSigmaMatrix = np.zeros([1, numFeatures + 2])
             nightData = []
-            #viewAsteroidData()
             fltrLvl = int(input("Filter Intensity (1: none, 2: low, 3: med, 4: high): "))
-            sigmaMatrix, nightData = fillSigmaMatrix(astName, asteroid, astSigmaMatrix, fltrLvl)
-            print(sigmaMatrix)
-            print(nightData)
-            #print("RB: " + str(asteroid["rb"]) + "\n")
-            #print("RB: " + str(asteroid["rb"]) + "\n")
-            #print("RB: " + str(asteroid["rb"]) + "\n")
-            # print outliers for each attribute
-            # print nights that each outlier occurred
-            # print ZTF id for each outlier's observation
+            sigmaMatrix, nightData, outliers = fillSigmaMatrix(astName, asteroid, astSigmaMatrix, fltrLvl, True)
+            table = formatDataTable(sigmaMatrix, antIDS, [astName], 1, numFeatures)
 
+            print(table.transpose())
+            #print(nightData)
+
+            # print data
+            # ELONG:
+            #     Sigma: ......................table["elong"]
+            #     Outlier Value: ..............asteroid["elong"][max/min]
+            #     Night: ......................nightData[0]
+
+            print("ELONG:")
+            print("    Sigma: ..................... " + str(float(table["elong"])))
+            print("    Outlier Value: ............. " + str(outliers[0]))
+            print("    Night: ..................... " + str(int(nightData[0])))
+            print("    ZTF ID: .................... " + str(antIDS[0]))
+
+            print("RB:")
+            print("    Sigma: ..................... " + str(float(table["rb"])))
+            print("    Outlier Value: ............. " + str(outliers[1]))
+            print("    Night: ..................... " + str(int(nightData[1])))
+            print("    ZTF ID: .................... " + str(antIDS[1]))            
+
+            print("H:")
+            print("    Sigma: ..................... " + str(float(table["H"])))
+            print("    Outlier Value: ............. " + str(outliers[2]))
+            print("    Night: ..................... " + str(int(nightData[2])))
+            print("    ZTF ID: .................... " + str(antIDS[2]))            
+
+            print("MAG18:")
+            print("    Sigma: ..................... " + str(float(table["mag18omag8"])))
+            print("    Outlier Value: ............. " + str(outliers[3]))
+            print("    Night: ..................... " + str(int(nightData[3])))
+            print("    ZTF ID: .................... " + str(antIDS[3]))            
 
             # settup for printing all plots later...
             astDataFigs, ((plt1, plt2), (plt3, plt4)) = plt.subplots(2, 2, figsize=(15,15))
@@ -632,12 +680,12 @@ def viewOne():
             pass
         elif menu2Choice == 4:
             main()
+            break
         else:
-            exit()
+            break
 
 
-
-
+            
 ## MAIN PROGRAM:
     
 # menu set up:
@@ -665,12 +713,13 @@ def main():
             runProgram()
         elif menuChoice == 2:
             viewOne()
+            break
         elif menuChoice == 3:
             help()
         else:
-            print("Thank you for using SNAPS!\n")
-
+            break
 
 
 # Run the program
 main()
+leave()
