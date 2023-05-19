@@ -65,18 +65,12 @@ def exportFile(fileType, filename, data):
         data.to_csv(filename, index=False)
 
 # function for stripping data of all 0 entries
-def stripZeros(data, fltrLvl):
-    # numZeros = int((data.values == 0.0).sum(axis=1))
-    # if numZeros >= fltrLvl:
-    #     dataStrip = data.drop(data[data['rb'] == 0].index)
-    #     dataStrip = dataStrip.drop(dataStrip[dataStrip['elong'] == 0].index)
-    #     dataStrip = dataStrip.drop(dataStrip[dataStrip['H'] == 0].index)
-    #     dataStrip = dataStrip.drop(dataStrip[dataStrip['mag18omag8'] == 0].index)
-    #     return dataStrip
-    print(data.count(0.0))
-    if int(data.count(0.0)) >= fltrLvl:
-        return []
-    return data
+def stripZeros(data):
+    dataStrip = data.drop(data[data['rb'] == 0].index)
+    dataStrip = dataStrip.drop(dataStrip[dataStrip['elong'] == 0].index)
+    dataStrip = dataStrip.drop(dataStrip[dataStrip['H'] == 0].index)
+    dataStrip = dataStrip.drop(dataStrip[dataStrip['mag18omag8'] == 0].index)
+    return dataStrip
     
 
     
@@ -89,7 +83,6 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
     
     attrData = []
     nightData = []
-    #antIDS = []
 
     # grab asteroid name
     #name = asteroidNames["ssnamenr"][ast_ct + offset]
@@ -120,44 +113,30 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
         minIndex = 0
         maxIndex = len(dataSortedByFeature) - 1
 
-        # minSumVal = ( dataSortedByFeature[feature][minIndex] +
-        #             dataSortedByFeature[feature][minIndex + 1] +
-        #             dataSortedByFeature[feature][minIndex + 2] )
+        minSumVal = ( dataSortedByFeature[feature][minIndex] +
+                    dataSortedByFeature[feature][minIndex + 1] +
+                    dataSortedByFeature[feature][minIndex + 2] )
 
-        # maxSumVal = ( dataSortedByFeature[feature][maxIndex] +
-        #             dataSortedByFeature[feature][maxIndex - 1] +
-        #             dataSortedByFeature[feature][maxIndex - 2] )
+        maxSumVal = ( dataSortedByFeature[feature][maxIndex] +
+                    dataSortedByFeature[feature][maxIndex - 1] +
+                    dataSortedByFeature[feature][maxIndex - 2] )
 
-        # minAvgVal = minSumVal / 3
-        # maxAvgVal = maxSumVal / 3
+        minAvgVal = minSumVal / 3
+        maxAvgVal = maxSumVal / 3
 
-        # upperRange = maxAvgVal - obj_mean
-        # lowerRange = obj_mean - minAvgVal
-
-        minVal = (dataSortedByFeature[feature][minIndex])
-        maxVal = (dataSortedByFeature[feature][maxIndex])
-
-        upperRange = maxVal - obj_mean
-        lowerRange = obj_mean - minVal
+        upperRange = maxAvgVal - obj_mean
+        lowerRange = obj_mean - minAvgVal
 
         highSigma = upperRange / obj_stdev
         lowSigma = lowerRange / obj_stdev
 
-        #pdb.set_trace()
-
-        featNightDF = dataSortedByFeature[[feature, "night"]]
-
-        #print("L:H Sigs: " + str(lowSigma) + " : " + str(highSigma))
-        #print(featNightDF)
-
-
+        #if (name == "117581"):
+            #pdb.set_trace()
         
         # add data to sigmaMatrix
         if (highSigma > lowSigma):
             # night of obs. used to determine if multiple anomalies occur simultaneously
             night = dataSortedByFeature["night"][maxIndex]
-
-            #print(featNightDF.loc[featNightDF['night'] == night])
 
             #sigmaMatrix[ast_ct][attr_ct] = highSigma * attr_weight
             rowSum += highSigma * attr_weight
@@ -168,7 +147,7 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
             attrData.append(highSigma * attr_weight)
 
         else:
-            night = dataSortedByFeature["night"][minIndex]
+            night = asteroid["night"][minIndex]
             #sigmaMatrix[ast_ct][attr_ct] = -lowSigma * attr_weight
             rowSum += -lowSigma * attr_weight
             absRowSum += lowSigma * attr_weight
@@ -184,27 +163,17 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
 
     ####
     rowAttrs = []
-    numZeros = 0
 
+    #pdb.set_trace()
 
-    # if( int(name) == 78675 or int(name) == 7183):
-    #     print("Night Data: " + str(nightData))
-        #pdb.set_trace()
-
+    #print("Night Data: " + str(nightData))
     for night in range(len(nightData)):
         if nightData.count(nightData[night]) >= filterLevel:
             rowAttrs.append(attrData[night])
-            # if( int(name) == 78675 or int(name) == 7183):
-            #     print("Night " + str(nightData[night]))
+            #print("Night " + str(nightData[night]))
         else:
             rowAttrs.append(0)
-            numZeros += 1
-
-            
-            
-    # if( int(name) == 78675 or int(name) == 7183):
-    #     print("Row Attrs: " + str(rowAttrs))
-        #print("AntIDS: " + str(antIDS))
+    #print("Row Attrs: " + str(rowAttrs))
     # append row sums to sigmaMatrix
     rowAttrs.append(rowSum)
     rowAttrs.append(absRowSum)
@@ -212,8 +181,6 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel):
     #sigmaMatrix[ast_ct][attr_ct + 1] = absRowSum
 
     sigmaMatrix = rowAttrs
-    if numZeros >= filterLevel:
-        sigmaMatrix = []
 
     return (sigmaMatrix, nightData)
 
@@ -283,9 +250,6 @@ def runProgram():
         # grab asteroid name
         name = asteroidNames["ssnamenr"][ast_ct + offset]
 
-        #if( int(name) == 78675 or int(name) == 7183):
-            #print(str(ast_ct) + ": " + name)
-
         # reset attributes looked at
         attr_ct = 0
 
@@ -316,32 +280,18 @@ def runProgram():
         # #sigmaMatrix[ast_ct][attr_ct] = rowSum
         # #sigmaMatrix[ast_ct][attr_ct + 1] = absRowSum
 
-        #print(attrData)
-        #print(len(attrData))
-        if len(attrData) != 0:
-            sigmaMatrix[ast_ct] = attrData
-        #print("sigMat " + str(sigmaMatrix[ast_ct]))
+        sigmaMatrix[ast_ct] = attrData
 
         # update asteroid count
         ast_ct += 1
 
 
-    # Reset arrays for rerunning program
-    nameArray = []
-    listNames = []
-    idArray = []
-        
     # Formatting data structures
     nameArray = np.array( asteroidNames['ssnamenr'])[offset: offset + ast_ct]
     listNames= np.array( antIDS )
     idArray = np.reshape(listNames, (maxIn, numFeatures))
 
-    # clear antIDS for next use
-    antIDS.clear()
 
-
-    #sigmaMatrix = sigmaMatrix[~np.all(sigmaMatrix == 0, axis=1)]
-    #print(sigmaMatrix)
     # DataFrame creation for main data display
     dataset = pd.DataFrame(
         {'Name': nameArray,
@@ -357,7 +307,6 @@ def runProgram():
          'Abs Row Sum': sigmaMatrix[:, 5]
         })
 
-        
     # User Testing:
     # if allAstDecision == 1:
     #     print(dataset)
@@ -366,17 +315,13 @@ def runProgram():
 
 
     # EXPORT
-    #newData = stripZeros(dataset, filterLevel)
-    #newData = dataset.loc[(dataset != 0).any(axis=1)]
-    newData = dataset.drop(
-        dataset.query("rb==0 and elong==0 and H==0 and mag18omag8==0").index)
+    newData = stripZeros(dataset)
     if exportFlg == 'y':
         exportFile(fileType, filename, newData)
     else:
         print(newData)
     
 
-        
     #### UNCOMMENT THIS!!!!! ####
 
     # This table finds the most outlying point (min or max) and calculates how many standard deviations away from the mean that point is. If it is above the mean, the number of sigmas is stored in the matrix. If it is below the mean, the negative number of sigmas is stored is the matrix. The final columns in the matrix are a row sum (of sigma multipliers) and a row sum of the absolute value of each matrix entry. 
@@ -668,7 +613,7 @@ def main():
         elif menuChoice == 3:
             help()
         else:
-            print("Thank you for using SNAPS!\n")
+            exit()
 
 
 
