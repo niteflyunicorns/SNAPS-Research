@@ -4,11 +4,9 @@ TODO:
   - work on adapting program to work on incoming stream of data, not just set data --> may need to do some research on this
 
   - improve usability??
-    - ask users if they would like to view or save plots (rather than just showing them)
     - when users view a specific asteroid, pull all relevant data & compile into table
       - give users option to download table or view table
       - give users option to filter table like when viewing all data
-      - 
 
 
 

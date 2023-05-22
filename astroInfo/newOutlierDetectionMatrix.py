@@ -554,6 +554,7 @@ def viewOne():
             table = formatDataTable(sigmaMatrix, antIDS, [astName], 1, numFeatures)
 
             print(table.transpose())
+            print("\n\n")
             #print(nightData)
 
             # print data
@@ -592,6 +593,12 @@ def viewOne():
 
             # rb vs. Julian Date scatterplot
             plt1.scatter(asteroid["jd"], asteroid['rb'], color = 'deeppink')
+            outlierRB = (asteroid[asteroid["rb"] == outliers[1]]).index
+            print(outlierRB)
+            print(asteroid["rb"][outlierRB])
+            print (outliers[1])
+            
+            plt1.scatter(asteroid["jd"][outlierRB], asteroid["rb"][outlierRB], color = 'blue')
             plt1.set(xlabel = "jd", ylabel = "rb")
             # plt.scatter(asteroid["jd"], asteroid['rb'], color = 'deeppink')
             # plt.xlabel("jd")
@@ -626,8 +633,10 @@ def viewOne():
             # plt.ylabel("H")
             # plt.show()
 
-            savefile = "ast-" + astName + "-dataplots.png"
-            astDataFigs.savefig(savefile)
+            if (input("Export plots as .png (y/n)?")):
+                savefile = "ast-" + astName + "-dataplots.png"
+                astDataFigs.savefig(savefile)
+                
             astDataFigs.show()
 
             if ( input("Show all plots? (y/n): ") == 'y'):
@@ -668,8 +677,11 @@ def viewOne():
                 plt6.scatter(fidFiltered["elong"], fidFiltered['H'], color = 'firebrick')
                 plt6.set(xlabel = "elong", ylabel = "H", title = "elong vs. H")
 
+                if (input("Export all plots as .png (y/n)?")):
+                    savefileAll = "ast-" + astName + "-alldataplots.png"
+                    astDataFigs.savefig(savefileAll)                    
 
-            #plt.show()
+                astDataAllFigs.show()
 
         elif menu2Choice == 2:
             #saveData(dataToSave)
