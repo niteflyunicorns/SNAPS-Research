@@ -1,54 +1,90 @@
-TODO:
+# Notes on Anomalous Asteroid Detection Program
+# Programmer: Savannah Chappus
+# Last Update: 6.10.2023
+
+# FUNCTION & USAGE
+########################################################################################
+# The program accepts a number of asteroids to observe and value for where in the data #
+# to start. Then, it pulls data for each individual asteroid, and finds the most       #
+# outlying point (min or max) and calculates the number of standard deviations away    #
+# from the mean that point is. If it is above the mean, the number of sigmas is stored #
+# in the matrix. If it is below the mean, the negative number of sigmas is stored in   #
+# the matrix. The final columns in the matrix are a row sum (of sigma multipliers), a  #
+# row sum of the absolute value of each matrix entry, and a numeric rating depicting   #
+# the chance that the asteroid is anomalous based on the algorithm. The algorithm      #
+# takes data for each attribute, normalizes it to the range [0, 1], then calculates    #
+# each individual observation's rating based on the optimum values for each attribute. #
+# The program then allows users to filter the data by features at specific user-given  #
+# values. Then users can view histograms of all the sigma data and scatterplots for    #
+# individual asteroids.                                                                #
+########################################################################################
+
+
+# CURRENT ERRORS & WARNINGS
+########################################################################################
+  ERROR 1: in formatDataTable(...), the formatting for the data when there is only one
+  asteroid input only works when called from viewOne(), not when runProgram() is ran
+  with only 1 asteroid. This is because of how the data is formatted when passed into
+  the function.
+
+  WARNING 1: in runProgram(), the line that drops all rows with 0 in them may not work
+  with the new algorithm because the new algorithm doesn't assign zeros in place of
+  data. Alternatively, it may still be fine since there are no zeros in the matrix then
+
+  ERROR 2: In viewOne(), clearing the antIDS list works fine while the program runs but
+  causes an error only upon exiting the program. I am not sure why.
+
+  
+# FUTURE WORK
+########################################################################################
   - work on adapting detection algorithm to be more accurate
     - compare multiple attributes at once rather than just highest/lowest outliers overall
-  - work on adapting program to work on incoming stream of data, not just set data --> may need to do some research on this
+  - work on adapting program to work on incoming stream of data, not just set data
 
-  - improve usability??
-    - when users view a specific asteroid, pull all relevant data & compile into table
-      - give users option to download table or view table
-      - give users option to filter table like when viewing all data
+  - give users option to download table or view table
+  - give users option to filter table like when viewing all data
 
-
-
-
-
-IDEAS for improving code accuracy:
-  - compare attributes through plots & calculate probability of 1 given another.
-    - use a probability threshold to flag future asteroids
-    - compare attributes pairwise then group the conditions & flag if a certain amount are true.
+  - add weighted system to current rating algorithm
+  - add prompt for exporting dataplots or viewing dataplots (rather than just sigma matrix)
+  - improve algorithm by incorporating more conditions to the ratingm like
+    - if x and x happen right after x happens, then boost the rating by __%
 
 
-ASTEROID ATTRIBUTES & MEANINGS:
+# NOTES ON ALGORITHM
+########################################################################################
+For each attribute (rb, elong, mag18omag8, H) the data is sorted, the min and max values
+are retrieved, and the data is normalized to the range [0, 1]. Then, each point in the
+set is 'ranked' and added to the total rating based on the desired value of each
+attribute. For example, once data is normalized to [0, 1], a value of .3 will have a
+'ranking' of .3, or 30%. If the attribute is ideal when it's as high as possible, this
+ranking will be added to the rating as it's complement, ie. .7 or 30%, otherwise it will
+be added as it's face value. This allows for the algorithm to get a night with a 100%
+rating when each of the 4 attributes is in its ideal condition. 
 
+Currently Used Attributes and Meanings
 RB:
     Good = value of 1
     Interesting if value is generally mediocre then spikes in "accuracy"
-    Intersting if value is generally high then dips in "accuracy" (especcialy 
-
+    Intersting if value is generally high then dips in "accuracy"
+    Algorithm uses: rb minimal for 100% score.
 
 ELONG:
-    value of 1 is perfect circle, value greater than 1 is more elongated
+    Value of 1 is perfect circle, value greater than 1 is more elongated
     Interesting if if value is high
-
+    Algorithm uses: elong maximal for 100% score
 
 H:
-    normalized to phaseangle
-    lower value = brighter
-    higher value = dimmer
-
+    Normalized to phaseangle
+    Lower value = brighter
+    Higher value = dimmer
+    Algorithm uses: H minimal for 100% score
 
 MAG18OMAG8:
     Good = value closer to zero
     Interesting if the number of sigmas is high (away from zero)
     Not as interesting if magpsf or H are also lower values (brighter)
-    
+    Algorithm uses: mag18omag8 maximal for 100% score
        
-Best possible case for outlier
-    * RB down
-    * elong up
-    * H down
-    * mag18omag8 up
-
 
 Potentially Interesting Asteroids:
 * 99928
@@ -57,17 +93,3 @@ Potentially Interesting Asteroids:
 * 6478 (Gault)
 * 99936
 * 98726
-
-########################################################################################
-# How this program works:                                                              #
-# The program accepts a number of asteroids to observe and value for where in the data #
-# to start. Then, it pulls data for each individual asteroid, and finds the most       #
-# outlying point (min or max) and calculates the number of standard deviations away    #
-# from the mean that point is. If it is above the mean, the number of sigmas is stored #
-# in the matrix. If it is below the mean, the negative number of sigmas is stored in   #
-# the matrix. The final columns in the matrix are a row sum (of sigma multipliers) and #
-# a row sum of the absolute value of each matrix entry. The program then allows users  #
-# to filter the data by features at specific user-given values. Then users can view    #
-# histograms of all the sigma data and scatterplots for individual asteroids           #
-########################################################################################
-

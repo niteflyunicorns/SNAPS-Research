@@ -1,179 +1,261 @@
+#########################################################################################
+### Program: SNAPS Anomaly Detection for Individual Asteroids
+### Programmer: Savannah Chappus
+### Last Update: 6.8.2023
+#########################################################################################
+
+## IMPORTS ##############################################################################
 from pymongo import MongoClient
 from pprint import pprint
 import pandas as pd
 import statistics as stat
-#import ruptures as rpt
 import matplotlib.pyplot as plt
 import numpy as np
 import random as rand
-import sys
-import asteroidMenuClass as menu
 import pdb
+# custom py file imports
+import asteroidMenuClass as menu
 
-# Connecting to mongo database and obtain data
+## MONGO CONNECTION #####################################################################
+# in the connection string below, format is:
+# mongodb://YOURUSERNAME:YOURPASSWORD@YOURCOMPUTER.computers.nau.edu:27017
 dest = "mongodb://schappus:unicornsSUM22@cmp4818.computers.nau.edu:27017"
-client = MongoClient(dest)
+client = MongoClient( dest )
 db = client.ztf
-mag18Data = db['mag18o8'] # changed from mag18o8 on 3.4.23
-asteroid_data = db['asteroids_all']
+mag18Data = db[ 'mag18o8' ] # all asteroids with mag18o8 data
+asteroid_data = db[ 'asteroids_all' ]
 
-# GLOBAL VARS
+## GLOBAL VARS ##########################################################################
 useMsg = "How this program works: \n\
 The program accepts a number of asteroids to observe and value for where in the data \n\
 to start. Then, it pulls data for each individual asteroid, and finds the most \n\
-outlying point (min or max) and calculates the number of standard deviations away \n\
+outlying point (min or max ) and calculates the number of standard deviations away \n\
 from the mean that point is. If it is above the mean, the number of sigmas is stored \n\
 in the matrix. If it is below the mean, the negative number of sigmas is stored in \n\
-the matrix. The final columns in the matrix are a row sum (of sigma multipliers) and \n\
+the matrix. The final columns in the matrix are a row sum (of sigma multipliers ) and \n\
 a row sum of the absolute value of each matrix entry. The program then allows users \n\
 to filter the data by features at specific user-given values. Then users can view \n\
 histograms of all the sigma data and scatterplots for individual asteroids."
 
 offset = 0 # for shifting data scope
-wanted_attr = [ "elong", "rb", "H", "mag18omag8" ] # attributes we want to look at
-numFeatures = len(wanted_attr)
-filterLevel = 1 # default filtering intensity (none)
-antIDS = list() # list for associated ztf id for observation
-weightDict  = {
+attrList = "ssnamenr, jd, fid, pid, diffmaglim, ra, dec, magpsf, sigmapsf, \
+chipsf, magap, sigmagap, magapbig, sigmagapbig, distnr, magnr, fwhm, elong, rb, \
+ssdistnr, ssmagnr, id, night, phaseangle, obsdist, heliodist, H, ltc, mag18omag8"
+
+# Top 4 Attributes of Interest:
+# mag180mag8 : sigma value for difference in 18" aperture vs 8" aperture photos
+# elong: elong val > 1 means oblong object, if this changes it's interesting
+# rb (real-bogus ): value to represent the "validity" or "trustworthiness" of the
+# collected data
+# H: another measurement of brightness
+wantedAttrs = [ "elong", "rb", "H", "mag18omag8" ] # attributes we want to look at
+numFeatures = len( wantedAttrs )
+antIDS = list( ) # list for associated ztf id for observation
+weightDict = {
     "H": 1,
     "mag18omag8": 1,
     "elong": 1,
     "rb": 1
-}
+} # not currently used 
 
-# FUNCTION DEFINITIONS
+## FUNCTION DEFINITIONS #################################################################
 
 # clear: takes numerical input and prints that many new lines
 # used for clearing the screen to help with readability
-def clear(size):
-    print("\n" * size)
+def clear( size ):
+    print( "\n" * size )
 
-# help: takes no inputs, prints help message
-def help():
-    print(useMsg)
-    clear(1)
+# help: takes no inputs, prints the help message
+def help( ):
+    print( useMsg )
+    clear( 1 )
 
 # leave: takes no inputs, prints exit message & ends program
-def leave():
-    print("Thank you for using SNAPS!\n")
+def leave( ):
+    print( "Thank you for using SNAPS!\n" )
 
-# exportFile: takes no inputs, exports data to either .html or .csv
-def exportFile(fileType, filename, data):
-    print("Exporting data...\n")
-
+# exportFile: takes fileType, filename, and data as inputs, exports
+# data to either .html or .csv
+### TODO: modify program so that getting fileType and filename happen inside
+### this function
+def exportFile( fileType, filename, data ):
+    print( "Exporting data...\n" )
     if fileType == 1:
-        data.to_html(buf=filename, index=False)
+        data.to_html( buf=filename, index=False )
     if fileType == 2:
-        data.to_csv(filename, index=False)
+        data.to_csv( filename, index=False )
 
-# function for stripping data of all 0 entries
-def stripZeros(data, fltrLvl):
-    # numZeros = int((data.values == 0.0).sum(axis=1))
-    # if numZeros >= fltrLvl:
-    #     dataStrip = data.drop(data[data['rb'] == 0].index)
-    #     dataStrip = dataStrip.drop(dataStrip[dataStrip['elong'] == 0].index)
-    #     dataStrip = dataStrip.drop(dataStrip[dataStrip['H'] == 0].index)
-    #     dataStrip = dataStrip.drop(dataStrip[dataStrip['mag18omag8'] == 0].index)
-    #     return dataStrip
-    print(data.count(0.0))
-    if int(data.count(0.0)) >= fltrLvl:
-        return []
-    return data
+# this function has been commented out because there is a potential error
+# later in the code that may require this to be reintroduced in some form
+# # function for stripping data of all 0 entries
+# def stripZeros(data, fltrLvl ):
+#     #print(data.count(0.0 ) )
+#     if int(data.count(0.0 ) ) >= fltrLvl:
+#         return [ ]
+#     return data
+
+# getFilter: takes no inputs, gets filter type and level input from user
+def getFilter( ):
+    typeDict = { 0: 'Select Filter Type:',
+                1: 'By number of outlier occurences per night',
+                2: 'By overall asteroid anomaly rating',
+                3: 'By weighted attribute filtering',
+                4: 'None' }
+    menu.display( typeDict )
+    fltrType = int( input( ) )
+    if fltrType == 1:
+        clear( 2 )
+        levelDict = { 0: 'Select Filter Intensity:',
+                1: 'None',
+                2: 'more than 2 outliers per night',
+                3: 'more than 3 outliers per night',
+                4: 'exactly 4 outliers per night' }
+        menu.display( levelDict )
+        fltrLvl = int( input( ) )
+    elif fltrType == 2:
+        fltrLvl = float( input( 
+            "Rating Filter (ex. enter '90' for 90% chance or more of anomaly ): " ) )
+    elif fltrType == 3:
+        # TODO: add weighted attribute filtering
+        print( "Defaulting to no filter..." )
+        fltrLvl = 0
+    else:
+        fltrLvl = 0
+        
+    return [ fltrType, fltrLvl ]
+
+# normValue: takes element to normalize, min, and max values and normalizes to [ 0,1 ]
+def normValue( value, minVal, maxVal ):
+    normVal = ( value - minVal )/( maxVal - minVal )
+    return normVal
+
+# normDataset: takes in dataset (need not be single-column ) and normalizes
+# to range [ 0,1 ]
+def normDataset( astData ):
+    normalizedData = astData.copy( )
+    for col in wantedAttrs:
+        sortedData = astData.sort_values( by = [ col ] )
+        minVal = sortedData[ col ].iloc[ 0 ]
+        maxVal = sortedData[ col ].iloc[ len( sortedData ) - 1 ]
+        for row in range( len( astData[ col ] ) ):
+            newVal = normValue( astData[ col ][ row ], minVal, maxVal )
+            normalizedData.loc[ row, col ] = newVal
+    return normalizedData
+
+# rating: takes in data, night, outliers gives anomaly rating for individual night
+def getNightRating( data, night ):
+    ratings = [ ]
+    for attr in wantedAttrs:
+        sortedData = data.sort_values( by = [ attr ] )
+        minVal = sortedData[ attr ].iloc[ 0 ]
+        maxVal = sortedData[ attr ].iloc[ len( sortedData ) - 1 ]
+        nightIdx = sortedData[ ( sortedData[ "night" ] == night ) ].index
+        normVal = normValue( sortedData[ attr ][ nightIdx ], minVal, maxVal )
+        for val in normVal:
+            if val < 0:
+                pdb.set_trace( )
+            if attr in [ "elong", "mag18omag8" ]:
+                ratings.append( float( val ) )
+            else:
+                ratings.append( float( 1 - val ) )
+
+    nightRating = stat.mean( ratings ) * 100
+    return nightRating
+
+# getAstRating: takes in asteroid data (in dataframe ) and collects night ratings for
+# all observations and averages them to get the overall asteroid rating
+def getAstRating( astData ):
+    nightRatings = [ ]
+    for night in astData[ "night" ]:
+        nightRating = getNightRating( astData, night )
+        nightRatings.append( nightRating )
+    astRating = stat.mean( nightRatings )
+    return astRating
     
 # formatDataTable: takes in sigma matrix, antares IDs array, asteroid name array,
 # number of asteroids, and number of features and formats the sigma matrix into
 # a more reader-friendly table with headers
-def formatDataTable(sigmaMatrix, antIDS, nameArray, maxIn, numFeatures):
-    listNames = []
-    idArray = []
+def formatDataTable( sigmaMatrix, antIDS, nameArray, maxIn, numFeatures ):
+    listNames = [ ]
+    idArray = [ ]
     listNames= np.array( antIDS )
-    idArray = np.reshape(listNames, (maxIn, numFeatures))
+    idArray = np.reshape( listNames, ( maxIn, numFeatures ) )
     if maxIn != 1:
         dataset = pd.DataFrame(
-            {'Name': nameArray,
-             'elong': sigmaMatrix[:, 0],
-             'ZTF-ELONG': idArray[:, 0],
-             'rb': sigmaMatrix[:, 1],
-             'ZTF-RB': idArray[:, 1],
-             'H': sigmaMatrix[:, 2],
-             'ZTF-H': idArray[:, 2],
-             'mag18omag8': sigmaMatrix[:, 3],
-             'ZTF-MAG18OMAG8': idArray[:, 3],
-             'Row Sum': sigmaMatrix[:, 4],
-             'Abs Row Sum': sigmaMatrix[:, 5]
-            })
+            { 'Name': nameArray,
+             'elong': sigmaMatrix[ :, 0 ],
+             'ZTF-ELONG': idArray[ :, 0 ],
+             'rb': sigmaMatrix[ :, 1 ],
+             'ZTF-RB': idArray[ :, 1 ],
+             'H': sigmaMatrix[ :, 2 ],
+             'ZTF-H': idArray[ :, 2 ],
+             'mag18omag8': sigmaMatrix[ :, 3 ],
+             'ZTF-MAG18OMAG8': idArray[ :, 3 ],
+             'Row Sum': sigmaMatrix[ :, 4 ],
+             'Abs Row Sum': sigmaMatrix[ :, 5 ],
+             'Rating': sigmaMatrix[ :, 6 ]
+            } )
     if maxIn == 1:
+        ### ERROR: code below only works with 1 asteroid from "view one"
+        ### not from 'run program' due to formatting. TODO: Fix this
         dataset = pd.DataFrame(
-            {'Name': nameArray,
-             'elong': sigmaMatrix[0],
-             'ZTF-ELONG': idArray[:, 0],
-             'rb': sigmaMatrix[1],
-             'ZTF-RB': idArray[:, 1],
-             'H': sigmaMatrix[2],
-             'ZTF-H': idArray[:, 2],
-             'mag18omag8': sigmaMatrix[3],
-             'ZTF-MAG18OMAG8': idArray[:, 3],
-             'Row Sum': sigmaMatrix[4],
-             'Abs Row Sum': sigmaMatrix[5]
-            })
+            { 'Name': nameArray,
+             'elong': sigmaMatrix[ 0 ],
+             'ZTF-ELONG': idArray[ :, 0 ],
+             'rb': sigmaMatrix[ 1 ],
+             'ZTF-RB': idArray[ :, 1 ],
+             'H': sigmaMatrix[ 2 ],
+             'ZTF-H': idArray[ :, 2 ],
+             'mag18omag8': sigmaMatrix[ 3 ],
+             'ZTF-MAG18OMAG8': idArray[ :, 3 ],
+             'Row Sum': sigmaMatrix[ 4 ],
+             'Abs Row Sum': sigmaMatrix[ 5 ],
+             'Rating': sigmaMatrix[ 6 ]
+            } )
         
     return dataset
     
-# fillSigmaMatrix: takes the name of an asteroid, its data table, and an empty matrix to
-# fill with sigma data. Computes sigmas for each attribute and stores them in the matrix.
-# Returns the sigma matrix and data regarding the night of each observation's max sigma value
-def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel, outFlag):
-    #sigmaMatrix = np.zeros([1, numFeatures + 2]) # two allows for row sum & absolute row sum
-    attrData = []
-    nightData = []
-    outliers = []
-    #antIDS = []
-
-    # grab asteroid name
-    #name = asteroidNames["ssnamenr"][ast_ct + offset]
-    #name = asteroid
+# fillSigmaMatrix: takes the name of an asteroid, its data table, and an
+# empty matrix to fill with sigma data. Computes sigmas for each attribute
+# and stores them in the matrix. Returns the sigma matrix and data regarding
+# the night of each observation's max sigma value
+def fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, outFlag ):
+    attrData = [ ]
+    nightData = [ ]
+    outliers = [ ]
+    outliersLoc = [ ]
+    outlierNorms = [ ]
+    stripFlag = False
+    fltrType = fltr[ 0 ]
+    fltrLevel = fltr[ 1 ]
 
     # reset attributes looked at
     attr_ct = 0
     rowSum = absRowSum = 0
 
-    while ( attr_ct < len(wanted_attr) ):
-
+    while ( attr_ct < len( wantedAttrs ) ):
         # grab feature data and calculate mean and standard deviation
-        feature = wanted_attr[attr_ct]
+        feature = wantedAttrs[ attr_ct ]
         try: 
-            obj_stdev = stat.stdev(asteroid[feature])
-            obj_mean = stat.mean(asteroid[feature])
+            obj_stdev = stat.stdev( asteroid[ feature ] )
+            obj_mean = stat.mean( asteroid[ feature ] )
         except Exception as e:
-            print((name + " is the object causing error"), e)
+            print( ( name + " is the object causing error" ), e )
             
         # grab weight for feature
-        attr_weight = weightDict[feature]
+        attr_weight = weightDict[ feature ]
 
-        # sort specific asteroid data by feature
-        dataSortedByFeature = pd.DataFrame(mag18Data.find({"ssnamenr": int(name)}).sort(feature))
-
+        # sort specific asteroid data by feature & normalize
+        dataSortedByFeature = pd.DataFrame( 
+            mag18Data.find( { "ssnamenr": int( name ) } ).sort( feature ) )
+        normData = normDataset( dataSortedByFeature )
 
         # calculate min, max, and ranges for highSigma and lowSigma values
         minIndex = 0
-        maxIndex = len(dataSortedByFeature) - 1
+        maxIndex = len( dataSortedByFeature ) - 1
 
-        # minSumVal = ( dataSortedByFeature[feature][minIndex] +
-        #             dataSortedByFeature[feature][minIndex + 1] +
-        #             dataSortedByFeature[feature][minIndex + 2] )
-
-        # maxSumVal = ( dataSortedByFeature[feature][maxIndex] +
-        #             dataSortedByFeature[feature][maxIndex - 1] +
-        #             dataSortedByFeature[feature][maxIndex - 2] )
-
-        # minAvgVal = minSumVal / 3
-        # maxAvgVal = maxSumVal / 3
-
-        # upperRange = maxAvgVal - obj_mean
-        # lowerRange = obj_mean - minAvgVal
-
-        minVal = (dataSortedByFeature[feature][minIndex])
-        maxVal = (dataSortedByFeature[feature][maxIndex])
+        minVal = ( dataSortedByFeature[ feature ][ minIndex ] )
+        maxVal = ( dataSortedByFeature[ feature ][ maxIndex ] )
 
         upperRange = maxVal - obj_mean
         lowerRange = obj_mean - minVal
@@ -181,534 +263,594 @@ def fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel, outFlag):
         highSigma = upperRange / obj_stdev
         lowSigma = lowerRange / obj_stdev
 
-        #pdb.set_trace()
-
-        featNightDF = dataSortedByFeature[[feature, "night"]]
-
-        #print("L:H Sigs: " + str(lowSigma) + " : " + str(highSigma))
-        #print(featNightDF)
-
+        featNightDF = dataSortedByFeature[ [ feature, "night" ] ]
 
         
         # add data to sigmaMatrix
-        if (highSigma > lowSigma):
-            # night of obs. used to determine if multiple anomalies occur simultaneously
-            night = dataSortedByFeature["night"][maxIndex]
+        if ( highSigma > lowSigma ):
+            # night of observation
+            night = dataSortedByFeature[ "night" ][ maxIndex ]
 
-            #print(featNightDF.loc[featNightDF['night'] == night])
-
-            #sigmaMatrix[ast_ct][attr_ct] = highSigma * attr_weight
             rowSum += highSigma * attr_weight
             absRowSum += highSigma * attr_weight
 
             # keep track of ant id with specific observation
-            antIDS.append(dataSortedByFeature['id'][maxIndex])
-            attrData.append(highSigma * attr_weight)
-            outliers.append(maxVal)
+            antIDS.append( dataSortedByFeature[ 'id' ][ maxIndex ] )
+            attrData.append( highSigma * attr_weight )
+
+            # store outliers
+            outliers.append( maxVal )
+
+            # calculations for filtering ( opt 2 )
+            outlierNorms.append( normData[ feature ][ maxIndex ] )
 
         else:
-            night = dataSortedByFeature["night"][minIndex]
-            #sigmaMatrix[ast_ct][attr_ct] = -lowSigma * attr_weight
+            night = dataSortedByFeature[ "night" ][ minIndex ]
             rowSum += -lowSigma * attr_weight
             absRowSum += lowSigma * attr_weight
 
             # keep track of ant id with specific observation
-            antIDS.append(dataSortedByFeature['id'][minIndex])
-            attrData.append(-lowSigma * attr_weight)
-            outliers.append(minVal)
+            antIDS.append( dataSortedByFeature[ 'id' ][ minIndex ] )
+            attrData.append( -lowSigma * attr_weight )
+
+            # store outliers
+            outliers.append( minVal )
+
+            # calculations for filtering ( opt 2 )
+            outlierNorms.append( normData[ feature ][ minIndex ] )
 
         # update attribute count
         attr_ct += 1
         # add night of sigma value to list
-        nightData.append(night)
+        nightData.append( night )
 
-    ####
-    rowAttrs = []
+    rowAttrs = [ ]
     numZeros = 0
 
+    #### FILTERING DATA ####
+    if fltrType == 1:
+        # Option 1: filter by number of times outliers occur on specific night
+        for night in range( len( nightData ) ):
+            if nightData.count( nightData[ night ] ) >= fltrLevel:
+                rowAttrs.append( attrData[ night ] )
+            else:
+                rowAttrs.append( 0 )
+                numZeros += 1
+        if numZeros > fltrLevel:
+            stripFlag = True        
+    elif fltrType == 2:
+        # Option 2: filter by specifications
+        # assigns rating to each asteroid on how likely they are to be anomalous
+        # each category is normalized to [ 0,1 ] and the outlying point is rated from
+        # 1 to 100 for each category. Then, scores for each category are averaged to get
+        # total score for the asteroid. ## TODO ( optional ): incorporate weighting system
+        rowAttrs = attrData
+        astRating = getAstRating( asteroid )
+        if astRating < fltrLevel:
+            stripFlag = True
+    elif fltrType == 3:
+        # Option 3: filter by weight
+        ### TODO: Write filter by weight option
+        pass
+    else:
+        pass
 
-    # if( int(name) == 78675 or int(name) == 7183):
-    #     print("Night Data: " + str(nightData))
-        #pdb.set_trace()
+    # setting rowAttrs and astRating
+    if fltrType != 2:
+        astRating = np.nan
+    if fltrType in [ 3, 4 ]:
+        rowAttrs = attrData
 
-    for night in range(len(nightData)):
-        if nightData.count(nightData[night]) >= filterLevel:
-            rowAttrs.append(attrData[night])
-            # if( int(name) == 78675 or int(name) == 7183):
-            #     print("Night " + str(nightData[night]))
-        else:
-            rowAttrs.append(0)
-            numZeros += 1
-
-            
-            
-    # if( int(name) == 78675 or int(name) == 7183):
-    #     print("Row Attrs: " + str(rowAttrs))
-        #print("AntIDS: " + str(antIDS))
-    # append row sums to sigmaMatrix
-    rowAttrs.append(rowSum)
-    rowAttrs.append(absRowSum)
-    #sigmaMatrix[ast_ct][attr_ct] = rowSum
-    #sigmaMatrix[ast_ct][attr_ct + 1] = absRowSum
-
+    rowAttrs.append( rowSum )
+    rowAttrs.append( absRowSum )
+    rowAttrs.append( astRating )
+    
     sigmaMatrix = rowAttrs
-    if numZeros >= filterLevel:
-        sigmaMatrix = []
+    if stripFlag:
+        sigmaMatrix = [ ]
 
     if outFlag:
-        return (sigmaMatrix, nightData, outliers)
+        return ( sigmaMatrix, nightData, outliers )
 
-    return (sigmaMatrix, nightData)
+    return ( sigmaMatrix, nightData )
 
-
-
-
-# runProgram: runs the program from menu option 1. Lets users view as many asteroids
-# as desired from any starting point in the data, then computes and fills the sigma
-# matrix and runs data analytics on the results.
-def runProgram():
+########################################################################################
+### RUNPROGRAM function
+### Inputs: none
+### Returns: none
+### Use: runs the program from menu option 1. Lets users view as many asteroids
+### as desired from any starting point in the data, then computes and fills the sigma
+### matrix and runs data analytics on the results.
+########################################################################################
+def runProgram( ):
     # total num of asteroids we want to look at
-    maxIn = int(input("How many asteroids do you want to look at(-1 if all): "))
+    maxIn = int( input( "How many asteroids do you want to look at( -1 if all ): " ) )
 
     if ( maxIn < 0 ) :
-        maxIn = asteroid_data.count()
-        allAstDecision = input("This will run all 32k+ asteroids through the system. What would you like to do? \n 1. Run and display output on screen \n 2. Run and export output to file \n 3. Cancel \n")
+        maxIn = asteroid_data.count( )
+        print( "WARNING: This will run all 32k+ asteroids through the program." )
+        print( "This process may take several hours depending on your system.\n" )
+        allAstMenu = { 0: 'What would you like to do?',
+                1: 'Run and display output on screen',
+                2: 'Run and export output to file',
+                3: 'Cancel' }
+        menu.display( allAstMenu )
+        allAstDecision = int( input( ) )
         if allAstDecision == 3:
-            main()
+            runProgram( )
         if allAstDecision == 2:
             exportFlg = 'y'
              
-    #offset
-    offset = int(input("Where to start in data:(-1 if random):  "))
+    offset = int( input( "Where to start in data:( -1 if random ):  " ) )
     
-    if ( offset < 0 and maxIn < asteroid_data.count() ):
-        offset = rand.randint(0, asteroid_data.count() - maxIn - 1)
+    if ( offset < 0 and maxIn < asteroid_data.count( ) ):
+        offset = rand.randint( 0, asteroid_data.count( ) - maxIn - 1 )
 
-        
-    exportFlg = input("Would you like to export the results (y/n)? ")
+    exportFlg = input( "Would you like to export the results ( y/n )? " )
 
     if exportFlg == 'y':
-        fileType =  int(input("Export as \n 1. .html \n 2. .csv \n"))
-        filename = input("filename: ")
+        fileType =  int( input( "Export as \n 1. .html \n 2. .csv \n" ) )
+        filename = input( "filename: " )
 
-
-    filterLevel = int(input("Select level of intensity of filtering: \n 1. None \n 2. Low \n 3. Medium \n 4. High \n"))
+    fltr = getFilter( )
         
     # num of asteroids we have looked at 
     ast_ct = 0
 
-    # divider line for output
-    divider = ("_" * 120)
-
     # get all asteroid names
-    asteroidNames = pd.DataFrame(asteroid_data.find({},{ '_id': 0, 'ssnamenr' : 1}))
-
-    # # list for associated ztf id for observation
-    # antIDS = list()
+    asteroidNames = pd.DataFrame( asteroid_data.find( {},{ '_id': 0, 'ssnamenr' : 1 } ) )
 
     #Sigma Matrix
-    sigmaMatrix = np.zeros([maxIn, numFeatures + 2]) # TEMP PLACEHOLDER NUMBER!!!!!
-
-
-    # TOP 4 ATTR:
-    # mag180mag8 : sigma value for difference in 18 aperture vs 8 aperture photos
-    # elong: elong val > 1 means oblong object, if this changes it's interesting
-    # rb (real-bogus):
-    # H: another measurement of brightness
+    extraCols = 3 # for: rowSum, absRowSum, asteroidRating
+    sigmaMatrix = np.zeros( [ maxIn, numFeatures + extraCols ] )
 
     # Loop through our collection of names
-    while ( ast_ct < maxIn and ast_ct < len(asteroidNames)):
-        
+    while ( ast_ct < maxIn and ast_ct < len( asteroidNames ) ):
         # create temporary row variable to hold asteroid data for appending at the end
-        attrData = []
-        nightData = []
+        attrData = [ ]
+        nightData = [ ]
 
         # grab asteroid name
-        name = asteroidNames["ssnamenr"][ast_ct + offset]
-
-        #if( int(name) == 78675 or int(name) == 7183):
-            #print(str(ast_ct) + ": " + name)
+        name = asteroidNames[ "ssnamenr" ][ ast_ct + offset ]
 
         # reset attributes looked at
         attr_ct = 0
 
-        # loop through wanted attributes
+        # sort specific asteroid data by Julian Date
+        asteroid = pd.DataFrame( mag18Data.find( { "ssnamenr": int( name ) } ).sort( "jd" ) )
+        attrData, nightData = fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, False )
         
-        # while ( attr_ct < len(wanted_attr) ):
-            # CREATE METHOD FOR THIS PROCCESS SO THAT IT CAN BE USED AGAIN
-            # needs to take an asteroid as parameter
-
-            # sort specific asteroid data by Julian Date
-        asteroid = pd.DataFrame(mag18Data.find({"ssnamenr": int(name)}).sort("jd"))
-        attrData, nightData = fillSigmaMatrix(name, asteroid, sigmaMatrix, filterLevel, False)
-        
-
-        # append attributes to attrData only if multiple occur on same night
-        # rowAttrs = []
-        # for night in range(len(nightData)):
-        #     if nightData.count(nightData[night]) >= 2:
-        #         rowAttrs.append(attrData[night])
-        #     else:
-        #         rowAttrs.append(0)
-
-        # # append row sums to sigmaMatrix
-        # rowSum = attrData[len(attrData) - 2]
-        # absRowSum = attrData[len(attrData) - 1]
-        # rowAttrs.append(rowSum)
-        # rowAttrs.append(absRowSum)
-        # #sigmaMatrix[ast_ct][attr_ct] = rowSum
-        # #sigmaMatrix[ast_ct][attr_ct + 1] = absRowSum
-
-        #print(attrData)
-        #print(len(attrData))
-        if len(attrData) != 0:
-            sigmaMatrix[ast_ct] = attrData
-        #print("sigMat " + str(sigmaMatrix[ast_ct]))
+        if len( attrData ) != 0:
+            sigmaMatrix[ ast_ct ] = attrData
 
         # update asteroid count
         ast_ct += 1
 
-
     # Reset arrays for rerunning program
-    nameArray = []
-    listNames = []
-    idArray = []
+    nameArray = [ ]
+    listNames = [ ]
+    idArray = [ ]
         
     # Formatting data structures
-    nameArray = np.array( asteroidNames['ssnamenr'])[offset: offset + ast_ct]
+    nameArray = np.array( asteroidNames[ 'ssnamenr' ] )[ offset: offset + ast_ct ]
 
-    dataset = formatDataTable(sigmaMatrix, antIDS, nameArray, maxIn, numFeatures)
+    dataset = formatDataTable( sigmaMatrix, antIDS, nameArray, maxIn, numFeatures )
 
     # clear antIDS for next use
-    antIDS.clear()
-
-    # User Testing:
-    # if allAstDecision == 1:
-    #     print(dataset)
-    # elif allAstDecision == 2:
-    #     exportFile()
-
+    antIDS.clear( )
 
     # EXPORT
-    #newData = stripZeros(dataset, filterLevel)
-    #newData = dataset.loc[(dataset != 0).any(axis=1)]
-    newData = dataset.drop(
-        dataset.query("rb==0 and elong==0 and H==0 and mag18omag8==0").index)
+    # drop all rows in data where zeros are present ( from filters )
+    ### WARNING: I'm not sure if this works with the new filter system
+    ### TODO: check if it works and fix if it doesn't
+    newData = dataset.drop( 
+        dataset.query( "rb==0 and elong==0 and H==0 and mag18omag8==0" ).index )
     if exportFlg == 'y':
-        exportFile(fileType, filename, newData)
+        exportFile( fileType, filename, newData )
     else:
-        print(newData)
+        print( newData )
     
+    # first printout of relevant asteroid data
+    if ( input( "Look at total data histogram ( y/n ): " ) == 'y' ):
+        totalHistFigs, plts = plt.subplots( 2, 3, figsize=( 15,15 ) )
+        totalHistFigs.suptitle( "Histograms" )
 
-        
-    #### UNCOMMENT THIS!!!!! ####
+        # print( "Row Sum Histogram" )
+        plts[ 0,0 ].hist( np.array( dataset[ "Row Sum" ] ) )
+        plts[ 0,0 ].set( xlabel = "num sigmas", ylabel = "num asteroids", title = "Row Sum" )
 
-    # This table finds the most outlying point (min or max) and calculates how many standard deviations away from the mean that point is. If it is above the mean, the number of sigmas is stored in the matrix. If it is below the mean, the negative number of sigmas is stored is the matrix. The final columns in the matrix are a row sum (of sigma multipliers) and a row sum of the absolute value of each matrix entry. 
+        elongTest = dataset[ 'elong' ].sum( )
+        rbTest = dataset[ 'rb' ].sum( )
+        hTest = dataset[ 'H' ].sum( )
+        mag18 = dataset[ 'mag18omag8' ].sum( )
 
-
-
-    if ( input("Look at total data histogram (y/n): ") == 'y'):
-
-        # print out all data on asteroid
-        # allow user to fetch attributes???
-        # menu for usability? (help, inspect specific asteroid, view all data, view selection of data, view data based on criteria, quit)
-
-        totalHistFigs, plts = plt.subplots(2, 3, figsize=(15,15))
-        totalHistFigs.suptitle("Histograms")
-
-        # print("Row Sum Histogram")
-        plts[0,0].hist(np.array( dataset["Row Sum"]))
-        plts[0,0].set(xlabel = "number of sigmas", ylabel = "number of asteroids", title = "Row Sum")
-
-        elongTest = dataset['elong'].sum()
-        rbTest = dataset['rb'].sum()
-        hTest = dataset['H'].sum()
-        mag18 = dataset['mag18omag8'].sum()
-
-        elongTestM = dataset['elong'].mean()
-        rbTestM = dataset['rb'].mean()
-        hTestM = dataset['H'].mean()
-        mag18M = dataset['mag18omag8'].mean()
+        elongTestM = dataset[ 'elong' ].mean( )
+        rbTestM = dataset[ 'rb' ].mean( )
+        hTestM = dataset[ 'H' ].mean( )
+        mag18M = dataset[ 'mag18omag8' ].mean( )
 
 
-        print("ELONG")
-        print("Sum :" + str(elongTest))
-        print("Mean:" + str(elongTestM))
-        plts[0,1].hist(np.array( dataset["elong"]))
-        plts[0,1].set(xlabel = "num sigmas", ylabel = "num asteroids", title = "ELONG")
+        print( "ELONG" )
+        print( "Sum :" + str( elongTest ) )
+        print( "Mean:" + str( elongTestM ) )
+        plts[ 0,1 ].hist( np.array( dataset[ "elong" ] ) )
+        plts[ 0,1 ].set( xlabel = "num sigmas",
+                      ylabel = "num asteroids",
+                      title = "ELONG" )
 
-        print("RB")
-        print("Sum :" + str(rbTest))
-        print("Mean:" + str(rbTestM))
-        plts[0,2].hist(np.array( dataset["rb"]))
-        plts[0,2].set(xlabel = "num sigmas", ylabel = "num asteroids", title = "RB")
+        print( "RB" )
+        print( "Sum :" + str( rbTest ) )
+        print( "Mean:" + str( rbTestM ) )
+        plts[ 0,2 ].hist( np.array( dataset[ "rb" ] ) )
+        plts[ 0,2 ].set( xlabel = "num sigmas",
+                      ylabel = "num asteroids",
+                      title = "RB" )
 
-        print("H")
-        print("Sum :" + str(hTest))
-        print("Mean:" + str(hTestM))
-        plts[1,0].hist(np.array( dataset["H"]))
-        plts[1,0].set(xlabel = "num sigmas", ylabel = "num asteroids", title = "H")
+        print( "H" )
+        print( "Sum :" + str( hTest ) )
+        print( "Mean:" + str( hTestM ) )
+        plts[ 1,0 ].hist( np.array( dataset[ "H" ] ) )
+        plts[ 1,0 ].set( xlabel = "num sigmas",
+                      ylabel = "num asteroids",
+                      title = "H" )
 
-        print("MAG18OMAG8")
-        print("Sum :" + str(mag18))
-        print("Mean:" + str(mag18M))
-        plts[1,1].hist(np.array( dataset["mag18omag8"]))
-        plts[1,1].set(xlabel = "num sigmas", ylabel = "num asteroids", title = "MAG18OMAG8")
+        print( "MAG18OMAG8" )
+        print( "Sum :" + str( mag18 ) )
+        print( "Mean:" + str( mag18M ) )
+        plts[ 1,1 ].hist( np.array( dataset[ "mag18omag8" ] ) )
+        plts[ 1,1 ].set( xlabel = "num sigmas",
+                      ylabel = "num asteroids",
+                      title = "MAG18OMAG8" )
 
         # adjust the spacing so things don't overlap
-        totalHistFigs.subplots_adjust(
+        totalHistFigs.subplots_adjust( 
                             wspace=0.4,
-                            hspace=0.4)
+                            hspace=0.4 )
 
         # delete currently unused 6th plot space
-        totalHistFigs.delaxes(plts[1,2])
+        totalHistFigs.delaxes( plts[ 1,2 ] )
 
         # show the total histogram plots
-        totalHistFigs.show()
+        totalHistFigs.show( )
 
+    ### FOR PROGRAMMERS: the below are "ideal" filter levels for each attribute
+    ### this data is subjective and open to change. Additionally, this filtering
+    ### method has essentially been replaced by the anomaly rating
     # rbLowFlag = dataset[ dataset[ 'rb' ] <= -4 ]
     # rbHighFlag = dataset[ dataset[ 'rb' ] >= 0 ]
     # HHighFlag = dataset[ dataset[ 'H' ] >= 3 ]
     # HLowFlag = dataset[ dataset[ 'H' ] <= -4 ]
     # elongHighFlag = dataset[ dataset[ 'elong' ] >= 4 ]
 
-    #Filter Loop 
-    #############################################################
-
-    #New Area
-
+    # filtering loop for individual attributes
     filteredDataset = dataset
-
     emptyFlag = False
     continueFlag = True
 
-
     while ( continueFlag and( not emptyFlag ) ):
-
-        filterInput = input("Enter feature to filter by('n' if None): \n")
-        continueFlag = (filterInput != 'n')
+        filterInput = input( "Enter feature to filter by( 'n' if None ): \n" )
+        continueFlag = ( filterInput != 'n' )
 
         if ( continueFlag ):
-            filterHighLimit = int(input("Data >  "))
-            filterLowLimit = int(input("Data <  "))
+            filterHighLimit = int( input( "Data >  " ) )
+            filterLowLimit = int( input( "Data <  " ) )
 
             prevSet = filteredDataset
-            filteredDataset = filteredDataset.loc[ ( filteredDataset[ filterInput ] > filterHighLimit ) & ( filteredDataset[ filterInput ] < filterLowLimit ) ]
+            filteredDataset = filteredDataset.loc[ 
+                ( filteredDataset[ filterInput ] > filterHighLimit ) &
+                ( filteredDataset[ filterInput ] < filterLowLimit ) ]
             emptyFlag = filteredDataset.empty
 
             if ( not emptyFlag ):
-                print(filteredDataset)
+                print( filteredDataset )
 
             else:
-                print("This returns an empty Data Set ")
+                print( "This returns an empty Data Set " )
 
-                resetInput = int(input("0 to continue, 1 to reset last filter, 2 to reset all filters"))
+                resetInput = int( input( 
+                    "0 to continue, 1 to reset last filter, 2 to reset all filters" ) )
 
-                if ( resetInput == 1):
+                if ( resetInput == 1 ):
                     filteredDataset = prevSet
                     emptyFlag = False
                     continueFlag = True
 
-                if ( resetInput == 2):
+                if ( resetInput == 2 ):
                     filteredDataset = dataset
                     emptyFlag = False
                     continueFlag = True
 
-
-
-                    
-    if (input("Inspect Specific Asteroid(y/n): ") == "y"):
-        viewOne()
+    # prompt for inspecting specific asteroid after running program on multiple
+    if ( input( "Inspect Specific Asteroid( y/n ): " ) == "y" ):
+        viewOne( )
     
-    
-###########################################################################################
-def viewOne():
-    astName = input("Asteroid Name:\n")
-    #asteroidNames = pd.DataFrame(asteroid_data.find({},{ '_id': 0, 'ssnamenr' : 1}))
-    #asteroidNames.to_html("astNames.html")
-    #location = asteroidNames.index.get_loc(int(astName))
-    #print("LOCATION: \n")
-    #print(location)
-    clear(10)
-    asteroid = pd.DataFrame(mag18Data.find({"ssnamenr": int(astName)}).sort("jd"))
+########################################################################################
+### VIEWONE function
+### Inputs: none
+### Returns: none
+### Use: Allows user to specific the name ( numerical 'ssnamenr' from database ) of an
+### asteroid they wish to analyze more in depth than in runProgram. 
+########################################################################################
+def viewOne( ):
+    astName = input( "Asteroid Name:\n" )
+    clear( 2 )
+    asteroid = pd.DataFrame( mag18Data.find( { "ssnamenr": int( astName ) } ).sort( "jd" ) )
 
-    menu2Dict = {0: 'Inspect Asteroid ' + str(astName) + ":",
+    menu2Dict = { 0: 'Inspect Asteroid ' + str( astName ) + ":",
                  1: 'View asteroid data',
                  2: 'Save/download asteroid data',
-                 3: 'Filter asteroid data',
+                 3: 'View Data by Attribute',
                  4: 'Return to Main Menu',
-                 5: 'Quit'}
-
+                 5: 'Quit' }
     menu2Choice = 0
-
+    
     while menu2Choice != 4 or menu2Choice != 5:
-        menu.display(menu2Dict)
-        menu2Choice = int(input())
-        clear(10)
+        menu.display( menu2Dict )
+        menu2Choice = int( input( ) )
+        clear( 2 )
         if menu2Choice == 1:
-            print("Asteroid " + astName + " Stats:\n")
-            astSigmaMatrix = np.zeros([1, numFeatures + 2])
-            nightData = []
-            fltrLvl = int(input("Filter Intensity (1: none, 2: low, 3: med, 4: high): "))
-            sigmaMatrix, nightData, outliers = fillSigmaMatrix(astName, asteroid, astSigmaMatrix, fltrLvl, True)
-            table = formatDataTable(sigmaMatrix, antIDS, [astName], 1, numFeatures)
+            fltr = getFilter( )
+            print( "Asteroid " + astName + " Stats:\n" )
+            astSigmaMatrix = np.zeros( [ 1, numFeatures + 2 ] )
+            nightData = [ ]
+            sigmaMatrix, nightData, outliers = fillSigmaMatrix( astName,asteroid,
+                                                               astSigmaMatrix,
+                                                               fltr, True )
+            if len( sigmaMatrix ) == 0:
+                print( "ERROR: Your chosen filter level yielded an empty matrix!" )
+                antIDS.clear( )
+                viewOne( )
 
-            print(table.transpose())
-            print("\n\n")
-            #print(nightData)
+            #breakpoint( )
+            table = formatDataTable( sigmaMatrix, antIDS, [ astName ], 1, numFeatures )
+            astRating = float( table[ "Rating" ] )
 
-            # print data
-            # ELONG:
-            #     Sigma: ......................table["elong"]
-            #     Outlier Value: ..............asteroid["elong"][max/min]
-            #     Night: ......................nightData[0]
+            # reset antIDS for reruns of program
+            ### ERROR: This works for the most part, but still errors out upon quitting
+            ### the program - not sure why
+            antIDS.clear( )
 
-            print("ELONG:")
-            print("    Sigma: ..................... " + str(float(table["elong"])))
-            print("    Outlier Value: ............. " + str(outliers[0]))
-            print("    Night: ..................... " + str(int(nightData[0])))
-            print("    ZTF ID: .................... " + str(antIDS[0]))
+            print( table.transpose( ) )
+            print( "\n\n" )
 
-            print("RB:")
-            print("    Sigma: ..................... " + str(float(table["rb"])))
-            print("    Outlier Value: ............. " + str(outliers[1]))
-            print("    Night: ..................... " + str(int(nightData[1])))
-            print("    ZTF ID: .................... " + str(antIDS[1]))            
+            if ( input( "Display all data for asteroid " + astName + "? ( y/n )\n" ) != 'n' ):
+                print( "\n\n" )
+                print( "Asteroid Rating: " + str( round( astRating, 2 ) ) + "%" )
+                print( "\n" )
+                
+                print( "ELONG:" )
+                print( "    Sigma: ............. " + str( float( table[ "elong" ] ) ) )
+                print( "    Outlier Value: ..... " + str( outliers[ 0 ] ) )
+                print( "    Std Dev: ........... " + str( stat.stdev( asteroid[ "elong" ] ) ) )
+                print( "    Mean: .............. " + str( stat.mean( asteroid[ "elong" ] ) ) )
+                print( "    Night: ............. " + str( int( nightData[ 0 ] ) ) )
+                print( "    ZTF ID: ............ " + str( antIDS[ 0 ] ) )
 
-            print("H:")
-            print("    Sigma: ..................... " + str(float(table["H"])))
-            print("    Outlier Value: ............. " + str(outliers[2]))
-            print("    Night: ..................... " + str(int(nightData[2])))
-            print("    ZTF ID: .................... " + str(antIDS[2]))            
+                print( "RB:" )
+                print( "    Sigma: ............. " + str( float( table[ "rb" ] ) ) )
+                print( "    Outlier Value: ..... " + str( outliers[ 1 ] ) )
+                print( "    Std Dev: ........... " + str( stat.stdev( asteroid[ "rb" ] ) ) )
+                print( "    Mean: .............. " + str( stat.mean( asteroid[ "rb" ] ) ) )
+                print( "    Night: ............. " + str( int( nightData[ 1 ] ) ) )
+                print( "    ZTF ID: ............ " + str( antIDS[ 1 ] ) )            
 
-            print("MAG18:")
-            print("    Sigma: ..................... " + str(float(table["mag18omag8"])))
-            print("    Outlier Value: ............. " + str(outliers[3]))
-            print("    Night: ..................... " + str(int(nightData[3])))
-            print("    ZTF ID: .................... " + str(antIDS[3]))            
+                print( "H:" )
+                print( "    Sigma: ............. " + str( float( table[ "H" ] ) ) )
+                print( "    Outlier Value: ..... " + str( outliers[ 2 ] ) )
+                print( "    Std Dev: ........... " + str( stat.stdev( asteroid[ "H" ] ) ) )
+                print( "    Mean: .............. " + str( stat.mean( asteroid[ "H" ] ) ) ) 
+                print( "    Night: ............. " + str( int( nightData[ 2 ] ) ) )
+                print( "    ZTF ID: ............ " + str( antIDS[ 2 ] ) )            
 
-            # settup for printing all plots later...
-            astDataFigs, ((plt1, plt2), (plt3, plt4)) = plt.subplots(2, 2, figsize=(15,15))
-            astDataFigs.suptitle("Asteroid " + astName)
+                print( "MAG18:" )
+                print( "    Sigma: ............. " + str( float( table[ "mag18omag8" ] ) ) )
+                print( "    Outlier Value: ..... " + str( outliers[ 3 ] ) )
+                print( "    Std Dev: ........... " + str( stat.stdev( asteroid[ "mag18omag8" ] ) ) )
+                print( "    Mean: .............. " + str( stat.mean( asteroid[ "mag18omag8" ] ) ) )
+                print( "    Night: ............. " + str( int( nightData[ 3 ] ) ) )
+                print( "    ZTF ID: ............ " + str( antIDS[ 3 ] ) )                            
+                print( "\n\n" )
+                print( asteroid[ [ "night", "elong", "H", "rb", "mag18omag8", "fid" ] ] )
+            
+            # setup for printing all plots later...
+            astDataFigs, ( ( plt3, plt2 ), ( plt1, plt4 ) ) = plt.subplots( 2, 2, figsize=( 15,15 ) )
+            astDataFigs.suptitle( "Asteroid " + astName )
 
             # rb vs. Julian Date scatterplot
-            plt1.scatter(asteroid["jd"], asteroid['rb'], color = 'deeppink')
-            outlierRB = (asteroid[asteroid["rb"] == outliers[1]]).index
-            print(outlierRB)
-            print(asteroid["rb"][outlierRB])
-            print (outliers[1])
+            plt1.scatter( asteroid[ "jd" ], asteroid[ 'rb' ], color = 'deeppink' )
+            outlierRB = ( asteroid[ asteroid[ "rb" ] == outliers[ 1 ] ] ).index
+            plt1.scatter( asteroid[ "jd" ][ outlierRB ],
+                         asteroid[ "rb" ][ outlierRB ],
+                         color = 'white',
+                         marker = "." )
+            plt1.annotate( '%s' % nightData[ 1 ],
+                          xy = ( asteroid[ "jd" ][ outlierRB ],
+                                asteroid[ "rb" ][ outlierRB ] ) )
+            plt1.set( xlabel = "jd", ylabel = "rb" )
             
-            plt1.scatter(asteroid["jd"][outlierRB], asteroid["rb"][outlierRB], color = 'blue')
-            plt1.set(xlabel = "jd", ylabel = "rb")
-            # plt.scatter(asteroid["jd"], asteroid['rb'], color = 'deeppink')
-            # plt.xlabel("jd")
-            # plt.ylabel("rb")
-            # plt.show()
-
             # mag18omag8 vs. Julian Date scatterplot
-            plt2.scatter(asteroid["jd"], asteroid['mag18omag8'], color = 'gold')
-            plt2.set(xlabel = "jd", ylabel = "mag18omag8")
-            # plt.scatter(asteroid["jd"], asteroid['mag18omag8'], color = 'gold')
-            # plt.xlabel("jd")
-            # plt.ylabel("mag18omag8")
-            # plt.show()
+            plt2.scatter( asteroid[ "jd" ], asteroid[ 'mag18omag8' ], color = 'gold' )
+            outlierMAG18 = ( asteroid[ asteroid[ "mag18omag8" ] == outliers[ 3 ] ] ).index
+            plt2.scatter( asteroid[ "jd" ][ outlierMAG18 ],
+                         asteroid[ "mag18omag8" ][ outlierMAG18 ],
+                         color = 'white',
+                         marker = "." )
+            plt2.annotate( '%s' % nightData[ 3 ],
+                          xy = ( asteroid[ "jd" ][ outlierMAG18 ],
+                                asteroid[ "mag18omag8" ][ outlierMAG18 ] ) )
+            plt2.set( xlabel = "jd", ylabel = "mag18omag8" )
 
             # elong vs. Julian Date scatterplot
-            plt3.scatter(asteroid["jd"], asteroid['elong'], color = 'blue')
-            plt3.set(xlabel = "jd", ylabel = "elong")
-            # plt.scatter(asteroid["jd"], asteroid['elong'], color = 'blue')
-            # plt.xlabel("jd")
-            # plt.ylabel("elong")
-            # plt.show()
+            plt3.scatter( asteroid[ "jd" ], asteroid[ 'elong' ], color = 'blue' )
+            outlierELONG = ( asteroid[ asteroid[ "elong" ] == outliers[ 0 ] ] ).index
+            plt3.scatter( asteroid[ "jd" ][ outlierELONG ],
+                         asteroid[ "elong" ][ outlierELONG ],
+                         color = "white",
+                         marker = "." )
+            plt3.annotate( '%s' % nightData[ 0 ],
+                          xy = ( asteroid[ "jd" ][ outlierELONG ],
+                                asteroid[ "elong" ][ outlierELONG ] ) )
+            plt3.set( xlabel = "jd", ylabel = "elong" )
 
             # H vs. Julian Date scatterplot
-            fidFiltered = asteroid.loc[ (asteroid["fid"] == 1) ]
-            plt4.scatter(fidFiltered["jd"], fidFiltered['H'], color = 'green')
-            fidFiltered = asteroid.loc[ (asteroid["fid"] == 2) ]
-            plt4.scatter(fidFiltered["jd"], fidFiltered['H'], color = 'red')
-            plt4.set(xlabel = "jd", ylabel = "H")
+            fidFiltered = asteroid.loc[ ( asteroid[ "fid" ] == 1 ) ]
+            plt4.scatter( fidFiltered[ "jd" ], fidFiltered[ 'H' ], color = 'green' )
+            outlierH = ( asteroid[ asteroid[ "H" ] == outliers[ 2 ] ] ).index
+            fidFiltered = asteroid.loc[ ( asteroid[ "fid" ] == 2 ) ]
+            plt4.scatter( fidFiltered[ "jd" ], fidFiltered[ 'H' ], color = 'red' )
+            plt4.scatter( asteroid[ "jd" ][ outlierH ],
+                         asteroid[ "H" ][ outlierH ],
+                         color = "white",
+                         marker = "." )
+            plt4.annotate( '%s' % nightData[ 2 ],
+                          xy = ( asteroid[ "jd" ][ outlierH ],
+                                asteroid[ "H" ][ outlierH ] ) )
+            plt4.set( xlabel = "jd", ylabel = "H" )
 
-            # plt.scatter(fidFiltered["jd"], fidFiltered['H'], color = 'red')
-            # plt.xlabel("jd")
-            # plt.ylabel("H")
-            # plt.show()
-
-            if (input("Export plots as .png (y/n)?")):
+            if ( input( "Export plots as .png ( y/n )?" ) ):
                 savefile = "ast-" + astName + "-dataplots.png"
-                astDataFigs.savefig(savefile)
-                
-            astDataFigs.show()
+                astDataFigs.savefig( savefile )
 
-            if ( input("Show all plots? (y/n): ") == 'y'):
+            ### TODO: add prompt for showing or exporting data
+            #astDataFigs.show( )
 
-                astDataAllFigs, ((plt1, plt2, plt3), (plt4, plt5, plt6)) = plt.subplots(2, 3, figsize=(15,15))
-                astDataAllFigs.suptitle("Asteroid " + astName)
+            if ( input( "Show all plots? ( y/n ): " ) == 'y' ):
+                astDataAllFigs, ( ( plt5, plt6, plt7 ),
+                                 ( plt8, plt9, plt10 ) ) = plt.subplots( 2, 3, figsize=( 15,15 ) )
+                astDataAllFigs.suptitle( "Asteroid " + astName )
 
                 # mag18omag8 vs. rb scatterplot
-                plt1.scatter(asteroid["mag18omag8"], asteroid['rb'], color = 'darkorange')
-                plt1.set(xlabel = "mag18omag8", ylabel = "rb", title = "mag18omag8 vs. rb")
+                plt5.scatter( asteroid[ "mag18omag8" ],
+                             asteroid[ 'rb' ],
+                             color = 'darkorange' )
+                plt5.set( xlabel = "mag18omag8",
+                         ylabel = "rb",
+                         title = "mag18omag8 vs. rb" )
 
                 # mag18omag8 vs. elong scatterplot
-                plt2.scatter(asteroid["mag18omag8"], asteroid['elong'], color = 'mediumaquamarine')
-                plt2.set(xlabel = "mag18omag8", ylabel = "elong", title = "mag18omag8 vs. elong")
+                plt6.scatter( asteroid[ "mag18omag8" ],
+                             asteroid[ 'elong' ],
+                             color = 'mediumaquamarine' )
+                plt6.set( xlabel = "mag18omag8",
+                         ylabel = "elong",
+                         title = "mag18omag8 vs. elong" )
 
                 # mag18omag8 vs. H scatterplot
-                fidFiltered = asteroid.loc[ (asteroid["fid"] == 1) ]
-                plt3.scatter(fidFiltered["mag18omag8"], fidFiltered['H'], color = 'limegreen')
-                fidFiltered = asteroid.loc[ (asteroid["fid"] == 2) ]
-                plt3.scatter(fidFiltered["mag18omag8"], fidFiltered['H'], color = 'tomato')
-                plt3.set(xlabel = "mag18omag8", ylabel = "H", title = "mag18omag8 vs. H")
+                fidFiltered = asteroid.loc[ ( asteroid[ "fid" ] == 1 ) ]
+                plt7.scatter( fidFiltered[ "mag18omag8" ],
+                             fidFiltered[ 'H' ],
+                             color = 'limegreen' )
+                fidFiltered = asteroid.loc[ ( asteroid[ "fid" ] == 2 ) ]
+                plt7.scatter( fidFiltered[ "mag18omag8" ],
+                             fidFiltered[ 'H' ],
+                             color = 'tomato' )
+                plt7.set( xlabel = "mag18omag8",
+                         ylabel = "H",
+                         title = "mag18omag8 vs. H" )
 
                 # rb vs. elong scatterplot
-                plt4.scatter(asteroid["rb"], asteroid['elong'], color = 'forestgreen')
-                plt4.set(xlabel = "rb", ylabel = "elong", title = "rb vs. elong")
+                plt8.scatter( asteroid[ "rb" ],
+                             asteroid[ 'elong' ],
+                             color = 'forestgreen' )
+                plt8.set( xlabel = "rb",
+                         ylabel = "elong",
+                         title = "rb vs. elong" )
 
                 # rb vs. H scatterplot
-                fidFiltered = asteroid.loc[ (asteroid["fid"] == 1) ]
-                plt5.scatter(fidFiltered["rb"], fidFiltered['H'], color = 'darkgreen')
-                fidFiltered = asteroid.loc[ (asteroid["fid"] == 2) ]
-                plt5.scatter(fidFiltered["rb"], fidFiltered['H'], color = 'darkred')
-                plt5.set(xlabel = "rb", ylabel = "H", title = "rb vs. H")
+                fidFiltered = asteroid.loc[ ( asteroid[ "fid" ] == 1 ) ]
+                plt9.scatter( fidFiltered[ "rb" ],
+                             fidFiltered[ 'H' ],
+                             color = 'darkgreen' )
+                fidFiltered = asteroid.loc[ ( asteroid[ "fid" ] == 2 ) ]
+                plt9.scatter( fidFiltered[ "rb" ],
+                             fidFiltered[ 'H' ],
+                             color = 'darkred' )
+                plt9.set( xlabel = "rb",
+                         ylabel = "H",
+                         title = "rb vs. H" )
 
                 # elong vs. H scatterplot
-                fidFiltered = asteroid.loc[ (asteroid["fid"] == 1) ]
-                plt6.scatter(fidFiltered["elong"], fidFiltered['H'], color = 'seagreen')
-                fidFiltered = asteroid.loc[ (asteroid["fid"] == 2) ]
-                plt6.scatter(fidFiltered["elong"], fidFiltered['H'], color = 'firebrick')
-                plt6.set(xlabel = "elong", ylabel = "H", title = "elong vs. H")
+                fidFiltered = asteroid.loc[ ( asteroid[ "fid" ] == 1 ) ]
+                plt10.scatter( fidFiltered[ "elong" ],
+                              fidFiltered[ 'H' ],
+                              color = 'seagreen' )
+                fidFiltered = asteroid.loc[ ( asteroid[ "fid" ] == 2 ) ]
+                plt10.scatter( fidFiltered[ "elong" ],
+                              fidFiltered[ 'H' ],
+                              color = 'firebrick' )
+                plt10.set( xlabel = "elong",
+                          ylabel = "H",
+                          title = "elong vs. H" )
 
-                if (input("Export all plots as .png (y/n)?")):
+                if ( input( "Export all plots as .png ( y/n )?" ) ):
                     savefileAll = "ast-" + astName + "-alldataplots.png"
-                    astDataFigs.savefig(savefileAll)                    
+                    astDataFigs.savefig( savefileAll )                    
 
-                astDataAllFigs.show()
+                ### TODO: Add prompt for showing or exporting plots
+                #astDataAllFigs.show( )
 
         elif menu2Choice == 2:
-            #saveData(dataToSave)
-            print("save all data\n")
+            print( "TODO: save data" )
         elif menu2Choice == 3:
-            #runFiltering()
-            print("run filtering system on individual asteroid observation data")
-            pass
+            #filter by attribute
+            attr = input( 
+                "Attribute to filter by ( press 'l' for list of available attributes ): " )
+            if attr == 'l':
+                print( attrList )
+                attr = input( 
+                    "Attribute to filter by ( press 'l' for list of available attributes ): " )
+                
+            attrData = input( "Desired attribute value: " )
+
+            # converting datatype as necessary
+            if attr == "id":
+                attrData = str( attrData )
+            else:
+                attrData = float( attrData )
+
+            filteredData  = asteroid.loc[ ( asteroid[ attr ] == attrData ) ]
+            
+            print( filteredData[ [ "ssnamenr", "night", "elong", "rb", "H", "mag18omag8", "id" ] ] )
+
+            if attr == "night":
+                # print new plot with vertical line on plot for viewing one night specifically
+                ### TODO: Add prompt for showing or exporting plots
+                # astDataFigs.show( )
+                jdAtNight = [ ]
+                night = asteroid.loc[ ( asteroid[ attr ] == attrData ) ]
+                for obs in range( len( night[ "jd" ] ) ):
+                    jdAtNight.append( float( night[ "jd" ].iloc[ obs ] ) )
+
+                for nght in range( len( jdAtNight ) ):
+                    # rb line
+                    plt1.axvline( x = jdAtNight[ nght ], color = 'pink' )
+                    # mag18 line
+                    plt2.axvline( x = jdAtNight[ nght ], color = 'khaki' )
+                    # elong line
+                    plt3.axvline( x = jdAtNight[ nght ], color = 'skyblue' )
+                    # H line
+                    plt4.axvline( x = jdAtNight[ nght ], color = 'palegreen' )
+
+                astDataFigs.show( )
+                
+
         elif menu2Choice == 4:
-            main()
+            main( )
             break
         else:
             break
 
-
-            
-## MAIN PROGRAM:
-    
-# menu set up:
-# view asteroid data
-   # if they choose all, preceed with a warning that data is big and ask if they'd like to continue or generate a .csv or .html file
-# view specific asteroid
-# view data by attribute ??
-# help displays use of program & meaning of menu items
-def main():
-    clear(20)
-    menuDict = {0: 'SNAPS Menu',
+########################################################################################
+### MAIN PROGRAM:
+### Inputs: none
+### Returns: none
+### Use: provides SNAPS menu for navigating through multiple options, including
+### run program, view specific asteroid, help, and quit. Allows user to view, analyze,
+### and export data on asteroids pulled from the mongo database.
+########################################################################################
+def main( ):
+    clear( 20 )
+    menuDict = { 0: 'SNAPS Menu',
                 1: 'Run program',
                 2: 'View specific asteroid',
                 3: 'Help',
@@ -716,22 +858,20 @@ def main():
 
     menuChoice = 0
 
-    # display menu
     while menuChoice != 4:
-        menu.display(menuDict)
-        menuChoice = int(input())
-        clear(10)
+        menu.display( menuDict )
+        menuChoice = int( input( ) )
+        clear( 2 )
         if menuChoice == 1:
-            runProgram()
+            runProgram( )
         elif menuChoice == 2:
-            viewOne()
+            viewOne( )
             break
         elif menuChoice == 3:
-            help()
+            help( )
         else:
             break
 
-
-# Run the program
-main()
-leave()
+## Run the program #####################################################################
+main( )
+leave( )
