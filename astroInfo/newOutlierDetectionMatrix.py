@@ -125,6 +125,7 @@ def getFilter( ):
     return [ fltrType, fltrLvl ]
 
 # normValue: takes element to normalize, min, and max values and normalizes to [ 0,1 ]
+@profile
 def normValue( value, minVal, maxVal ):
     normVal = ( value - minVal )/( maxVal - minVal )
     return normVal
@@ -143,6 +144,7 @@ def normDataset( astData ):
     return normalizedData
 
 # rating: takes in data, night, outliers gives anomaly rating for individual night
+@profile
 def getNightRating( data, night ):
     ratings = [ ]
     for attr in wantedAttrs:
@@ -164,6 +166,7 @@ def getNightRating( data, night ):
 
 # getAstRating: takes in asteroid data (in dataframe ) and collects night ratings for
 # all observations and averages them to get the overall asteroid rating
+@profile
 def getAstRating( astData ):
     nightRatings = [ ]
     for night in astData[ "night" ]:
