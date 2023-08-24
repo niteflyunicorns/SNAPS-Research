@@ -1,7 +1,7 @@
 #########################################################################################
 ### Program: SNAPS Anomaly Detection for Individual Asteroids
 ### Programmer: Savannah Chappus
-### Last Update: 6.8.2023
+### Last Update: 7.2.2023
 #########################################################################################
 
 ## IMPORTS ##############################################################################
@@ -127,7 +127,7 @@ def getFilter( ):
 # normValue: takes element to normalize, min, and max values and normalizes to [ 0,1 ]
 @profile
 def normValue( value, minVal, maxVal ):
-    normVal = ( value - minVal )/( maxVal - minVal )
+    normVal = ( value - minVal ) / ( maxVal - minVal )
     return normVal
 
 # normDataset: takes in dataset (need not be single-column ) and normalizes
@@ -149,13 +149,16 @@ def getNightRating( data, night ):
     ratings = [ ]
     for attr in wantedAttrs:
         sortedData = data.sort_values( by = [ attr ] )
-        minVal = sortedData[ attr ].iloc[ 0 ]
-        maxVal = sortedData[ attr ].iloc[ len( sortedData ) - 1 ]
-        nightIdx = sortedData[ ( sortedData[ "night" ] == night ) ].index
-        normVal = normValue( sortedData[ attr ][ nightIdx ], minVal, maxVal )
+        attrData = sortedData[ attr ]
+        minVal = attrData.iloc[ 0 ]
+        maxVal = attrData.iloc[ len( sortedData ) - 1 ]
+        nightSeries = pd.Series( sortedData[ "night" ] )
+        nightIdx = nightSeries[ ( nightSeries == night ) ].index
+        dataToNorm = attrData[ nightIdx ]
+        normVal = normValue( dataToNorm, minVal, maxVal )
         for val in normVal:
-            if val < 0:
-                pdb.set_trace( )
+            #if val < 0:
+                #pdb.set_trace( )
             if attr in [ "elong", "mag18omag8" ]:
                 ratings.append( float( val ) )
             else:
@@ -169,8 +172,12 @@ def getNightRating( data, night ):
 @profile
 def getAstRating( astData ):
     nightRatings = [ ]
-    for night in astData[ "night" ]:
-        nightRating = getNightRating( astData, night )
+    dataCols = [ ]
+    dataCols = wantedAttrs.copy()
+    dataCols.extend( [ 'ssnamenr', 'night' ] )
+    newData = astData[ dataCols ]
+    for night in newData[ "night" ]:
+        nightRating = getNightRating( newData, night )
         nightRatings.append( nightRating )
     astRating = stat.mean( nightRatings )
     return astRating
