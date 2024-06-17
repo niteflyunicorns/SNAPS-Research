@@ -1,6 +1,6 @@
 # Notes on Anomalous Asteroid Detection Program
 # Programmer: Savannah Chappus
-# Last Update: 6.10.2023
+# Last Update: 6.7.2024
 
 # FUNCTION & USAGE
 ########################################################################################
@@ -37,7 +37,8 @@
   
 # FUTURE WORK
 ########################################################################################
-  - work on adapting detection algorithm to be more accurate
+	- exchange error msgs following recieving an empty filter set with sys.stderr so that there are no prompts during program runtime
+	- work on adapting detection algorithm to be more accurate
     - compare multiple attributes at once rather than just highest/lowest outliers overall
   - work on adapting program to work on incoming stream of data, not just set data
 
@@ -46,7 +47,7 @@
 
   - add weighted system to current rating algorithm
   - add prompt for exporting dataplots or viewing dataplots (rather than just sigma matrix)
-  - improve algorithm by incorporating more conditions to the ratingm like
+  - improve algorithm by incorporating more conditions to the rating like
     - if x and x happen right after x happens, then boost the rating by __%
 
 
@@ -90,6 +91,11 @@ Potentially Interesting Asteroids:
 * 99928
 * 9937
 * 99970
-* 6478 (Gault)
 * 99936
 * 98726
+
+
+Definitely Interesting:
+* 6478 (Gault)
+* 3200 (Phaethon)
+* 2060 (Chiron)

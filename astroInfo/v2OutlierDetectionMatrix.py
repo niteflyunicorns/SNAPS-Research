@@ -1,7 +1,7 @@
 #########################################################################################
 ### Program: SNAPS Anomaly Detection for Individual Asteroids
 ### Programmer: Savannah Chappus
-### Last Update: 7.2.2023
+### Last Update: 6.3.2024
 #########################################################################################
 
 ## IMPORTS ##############################################################################
@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random as rand
 import pdb
-from line_profiler import profile
 # custom py file imports
 import asteroidMenuClass as menu
 
@@ -126,7 +125,7 @@ def getFilter( ):
     return [ fltrType, fltrLvl ]
 
 # normValue: takes element to normalize, min, and max values and normalizes to [ 0,1 ]
-# @profile
+#@profile
 def normValue( value, minVal, maxVal ):
     normVal = ( value - minVal ) / ( maxVal - minVal )
     return normVal
@@ -145,20 +144,27 @@ def normDataset( astData ):
     return normalizedData
 
 # rating: takes in data, night, outliers gives anomaly rating for individual night
-# @profile
-def getNightRating( data, night ):
+#@profile
+def getNightRating( data ):
     ratings = [ ]
+    npData = data.to_numpy()
+    # print( "\n************* DATA in getNightRating **************\n" )
+    # print( data )
+    # print( npData )
     for attr in wantedAttrs:
-        sortedData = data.sort_values( by = [ attr ] ) # slow line ??
-        attrData = sortedData[ attr ] 
+        # sortedData = npData.sort( by = [ attr ] ) # slow line
+        sortedData = data.sort_values( by=[ attr ] )
+        attrData = sortedData[ attr ]
+        # print( "\n**************** sorted by attr data **************\n" )
+        # print( attrData )
         minVal = attrData.iloc[ 0 ]
         maxVal = attrData.iloc[ len( sortedData ) - 1 ]
-        nightSeries = pd.Series( sortedData[ "night" ] ) # slow line
-        nightIdx = nightSeries[ ( nightSeries == night ) ].index # slow line
-        dataToNorm = attrData[ nightIdx ] # slow line
-        normVal = normValue( dataToNorm, minVal, maxVal ) #slow line
-        print( normVal )
-        for val in normVal:
+        # nightSeries = pd.Series( sortedData[ "night" ] )
+        # nightIdx = nightSeries[ ( nightSeries == night ) ].index # slow line
+        #dataToNorm = attrData[ nightIdx ] # slow line
+        #normVal = normValue( dataToNorm, minVal, maxVal ) #slow line
+        normVals = normValue( attrData, minVal, maxVal )
+        for val in normVals:
             #if val < 0:
                 #pdb.set_trace( )
             if attr in [ "elong", "mag18omag8" ]:
@@ -171,18 +177,17 @@ def getNightRating( data, night ):
 
 # getAstRating: takes in asteroid data (in dataframe ) and collects night ratings for
 # all observations and averages them to get the overall asteroid rating
-# @profile
+#@profile
 def getAstRating( astData ):
     nightRatings = [ ]
     dataCols = [ ]
     dataCols = wantedAttrs.copy()
     dataCols.extend( [ 'ssnamenr', 'night' ] )
     newData = astData[ dataCols ]
-    print( newData )
-    for night in newData[ "night" ]:
-    # for obs in newData:
-        nightRating = getNightRating( newData, night )
-        nightRatings.append( nightRating )
+    #for night in newData[ "night" ]:
+    # for obs in newData[ "night" ]:
+    nightRating = getNightRating( newData )
+    nightRatings.append( nightRating )
     astRating = stat.mean( nightRatings )
     return astRating
     
@@ -432,6 +437,9 @@ def runProgram( ):
 
         # sort specific asteroid data by Julian Date
         asteroid = pd.DataFrame( mag18Data.find( { "ssnamenr": int( name ) } ).sort( "jd" ) )
+        # print("\n******************** Asteroid Dataframe **********************\n")
+        # print( asteroid )
+        # print( asteroid.columns )
         attrData, nightData = fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, False )
         
         if len( attrData ) != 0:

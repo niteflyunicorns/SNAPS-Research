@@ -1,7 +1,7 @@
 #########################################################################################
 ### Program: SNAPS Anomaly Detection for Individual Asteroids
 ### Programmer: Savannah Chappus
-### Last Update: 7.2.2023
+### Last Update: 5.31.2024
 #########################################################################################
 
 ## IMPORTS ##############################################################################
@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random as rand
 import pdb
-from line_profiler import profile
+import sys
+#from line_profiler import profile
 # custom py file imports
 import asteroidMenuClass as menu
 
@@ -28,20 +29,60 @@ asteroid_data = db[ 'asteroids_all' ]
 
 ## GLOBAL VARS ##########################################################################
 useMsg = "How this program works: \n\
-The program accepts a number of asteroids to observe and value for where in the data \n\
-to start. Then, it pulls data for each individual asteroid, and finds the most \n\
-outlying point (min or max ) and calculates the number of standard deviations away \n\
-from the mean that point is. If it is above the mean, the number of sigmas is stored \n\
-in the matrix. If it is below the mean, the negative number of sigmas is stored in \n\
-the matrix. The final columns in the matrix are a row sum (of sigma multipliers ) and \n\
-a row sum of the absolute value of each matrix entry. The program then allows users \n\
-to filter the data by features at specific user-given values. Then users can view \n\
-histograms of all the sigma data and scatterplots for individual asteroids."
+The program accepts a number of asteroids \n\
+to observe and value for where in the data \n\
+to start. Then, it pulls data for each \n\
+individual asteroid, and finds the most \n\
+outlying point (min or max) and calculates \n\
+the number of standard deviations away \n\
+from the mean that point is. If it is above \n\
+the mean, the number of sigmas is stored \n\
+in the matrix. If it is below the mean, the \n\
+negative number of sigmas is stored in \n\
+the matrix. The final columns in the matrix \n\
+are a row sum (of sigma multipliers ) and \n\
+a row sum of the absolute value of each \n\
+matrix entry. The program then allows users \n\
+to filter the data by features at specific \n\
+user-given values. Then users can view \n\
+histograms of all the sigma data and \n\
+scatterplots for individual asteroids. \n\n"
+
+argsExpl = "Command Line Arguments Format & Meaning: \n\
+\t\t python astOutleirMatNew.py maxIn offset fltrType fltrLvl plots exportFlg fileType fileName astName featFltr lB uB \n\
+1. maxIn: number of asteroids to view (-1 to view all) \n\
+2. offset: where to start in data (-1 if random) \n\
+3. fltrType: type of filtering system to use on the selection of asteroids \n\
+\t (1) number of outlier occurences per night \n\
+\t (2) by overall asteroid anomaly rating \n\
+\t (3) by weighted attribute filtering \n\
+\t (4) none \n\
+4. fltrLvl: the intensity of your chosen filter. \n\
+\t for filter 1: 0, 2, 3, 4 (number of outliers per night) \n\
+\t for filter 2: any number 0-99, 0 = not anomalous, 100 = very anomalous \n\
+\t for filter 3: --> new prompt to get weights for each attribute \n\
+5. plots: include plots and diagrams as well as written data \n\
+6. exportFlg: export outputs to file. Note: if plots are included, \n\
+\t plots will export as individual .png files and text will output to \n\
+\t the desired file type. \n\
+\n\
+Optional Arguments: \n\
+When viewing only one asteroid, \n\
+\t 1. asteroid name \n\
+\t 2. feature to filter by (rb, elong, H, mag18, none) \n\
+\t 3. lower filter bound (...) \n\
+\t 4. upper filter bound (...) \n\
+\n\
+If exporting results, \n\
+\t 1. file type: (1) .html, (2) .csv \n\
+\t 2. file name (note: png files will export with this name as the prefix) \n\n\
+"
 
 offset = 0 # for shifting data scope
 attrList = "ssnamenr, jd, fid, pid, diffmaglim, ra, dec, magpsf, sigmapsf, \
 chipsf, magap, sigmagap, magapbig, sigmagapbig, distnr, magnr, fwhm, elong, rb, \
 ssdistnr, ssmagnr, id, night, phaseangle, obsdist, heliodist, H, ltc, mag18omag8"
+# attrList is for users to choose attrs to filter by
 
 # Top 4 Attributes of Interest:
 # mag180mag8 : sigma value for difference in 18" aperture vs 8" aperture photos
@@ -66,9 +107,17 @@ weightDict = {
 def clear( size ):
     print( "\n" * size )
 
+# getInputs: takes an dinput array and output array. Loops through
+# input prompts and gets user input and stores in output array
+def getInputs( inArray, outArray ):
+    for prompt in inArray:
+        value = input( prompt )
+        outArray.append( value )
+
 # help: takes no inputs, prints the help message
 def help( ):
     print( useMsg )
+    print( argsExpl )
     clear( 1 )
 
 # leave: takes no inputs, prints exit message & ends program
@@ -96,37 +145,37 @@ def exportFile( fileType, filename, data ):
 #     return data
 
 # getFilter: takes no inputs, gets filter type and level input from user
-def getFilter( ):
-    typeDict = { 0: 'Select Filter Type:',
-                1: 'By number of outlier occurences per night',
-                2: 'By overall asteroid anomaly rating',
-                3: 'By weighted attribute filtering',
-                4: 'None' }
-    menu.display( typeDict )
-    fltrType = int( input( ) )
-    if fltrType == 1:
-        clear( 2 )
-        levelDict = { 0: 'Select Filter Intensity:',
-                1: 'None',
-                2: 'more than 2 outliers per night',
-                3: 'more than 3 outliers per night',
-                4: 'exactly 4 outliers per night' }
-        menu.display( levelDict )
-        fltrLvl = int( input( ) )
-    elif fltrType == 2:
-        fltrLvl = float( input( 
-            "Rating Filter (ex. enter '90' for 90% chance or more of anomaly ): " ) )
-    elif fltrType == 3:
-        # TODO: add weighted attribute filtering
-        print( "Defaulting to no filter..." )
-        fltrLvl = 0
-    else:
-        fltrLvl = 0
+# def getFilter( ):
+    # typeDict = { 0: 'Select Filter Type:',
+    #             1: 'By number of outlier occurences per night',
+    #             2: 'By overall asteroid anomaly rating',
+    #             3: 'By weighted attribute filtering',
+    #             4: 'None' }
+    # menu.display( typeDict )
+    # fltrType = int( input( ) )
+    # if fltrType == 1:
+    #     clear( 2 )
+    #     levelDict = { 0: 'Select Filter Intensity:',
+    #             1: 'None',
+    #             2: 'more than 2 outliers per night',
+    #             3: 'more than 3 outliers per night',
+    #             4: 'exactly 4 outliers per night' }
+    #     menu.display( levelDict )
+    #     fltrLvl = int( input( ) )
+    # elif fltrType == 2:
+    #     fltrLvl = float( input( 
+    #         "Rating Filter (ex. enter '90' for 90% chance or more of anomaly ): " ) )
+    # elif fltrType == 3:
+    #     # TODO: add weighted attribute filtering
+    #     print( "Defaulting to no filter..." )
+    #     fltrLvl = 0
+    # else:
+    #     fltrLvl = 0
         
-    return [ fltrType, fltrLvl ]
+    # return [ fltrType, fltrLvl ]
 
 # normValue: takes element to normalize, min, and max values and normalizes to [ 0,1 ]
-# @profile
+#@profile
 def normValue( value, minVal, maxVal ):
     normVal = ( value - minVal ) / ( maxVal - minVal )
     return normVal
@@ -145,20 +194,21 @@ def normDataset( astData ):
     return normalizedData
 
 # rating: takes in data, night, outliers gives anomaly rating for individual night
-# @profile
-def getNightRating( data, night ):
+#@profile
+def getNightRating( data ):
     ratings = [ ]
     for attr in wantedAttrs:
         sortedData = data.sort_values( by = [ attr ] ) # slow line ??
         attrData = sortedData[ attr ] 
         minVal = attrData.iloc[ 0 ]
         maxVal = attrData.iloc[ len( sortedData ) - 1 ]
-        nightSeries = pd.Series( sortedData[ "night" ] ) # slow line
-        nightIdx = nightSeries[ ( nightSeries == night ) ].index # slow line
-        dataToNorm = attrData[ nightIdx ] # slow line
-        normVal = normValue( dataToNorm, minVal, maxVal ) #slow line
-        print( normVal )
-        for val in normVal:
+        # nightSeries = pd.Series( sortedData[ "night" ] ) # slow line
+        # nightIdx = nightSeries[ ( nightSeries == night ) ].index # slow line
+        # dataToNorm = attrData[ nightIdx ] # slow line
+        #normVal = normValue( dataToNorm, minVal, maxVal ) #slow line
+        normVals = normValue( attrData, minVal, maxVal )
+        # print( normVal )
+        for val in normVals:
             #if val < 0:
                 #pdb.set_trace( )
             if attr in [ "elong", "mag18omag8" ]:
@@ -171,18 +221,18 @@ def getNightRating( data, night ):
 
 # getAstRating: takes in asteroid data (in dataframe ) and collects night ratings for
 # all observations and averages them to get the overall asteroid rating
-# @profile
+#@profile
 def getAstRating( astData ):
     nightRatings = [ ]
     dataCols = [ ]
     dataCols = wantedAttrs.copy()
     dataCols.extend( [ 'ssnamenr', 'night' ] )
     newData = astData[ dataCols ]
-    print( newData )
-    for night in newData[ "night" ]:
+    # print( newData )
+    # for night in newData[ "night" ]:
     # for obs in newData:
-        nightRating = getNightRating( newData, night )
-        nightRatings.append( nightRating )
+    nightRating = getNightRating( newData )
+    nightRatings.append( nightRating )
     astRating = stat.mean( nightRatings )
     return astRating
     
@@ -376,43 +426,48 @@ def fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, outFlag ):
 ### as desired from any starting point in the data, then computes and fills the sigma
 ### matrix and runs data analytics on the results.
 ########################################################################################
-def runProgram( ):
+def runProgram( maxIn, offset, exportFlg, exportArgs, fltrType, fltrLvl, plots ):
     # total num of asteroids we want to look at
-    maxIn = int( input( "How many asteroids do you want to look at( -1 if all ): " ) )
+    #maxIn = int( input( "How many asteroids do you want to look at( -1 if all ): " ) )
+    
+    # get all asteroid names
+    asteroidNames = pd.DataFrame( asteroid_data.find( {},{ '_id': 0, 'ssnamenr' : 1 } ) )
 
+    featFltr = 'n'
     if ( maxIn < 0 ) :
-        maxIn = asteroid_data.count( )
-        print( "WARNING: This will run all 32k+ asteroids through the program." )
+        # print(asteroid_data)
+        maxIn = asteroidNames.size
+        print( "WARNING: This will run all " + str( maxIn ) + " asteroids through the program." )
         print( "This process may take several hours depending on your system.\n" )
-        allAstMenu = { 0: 'What would you like to do?',
-                1: 'Run and display output on screen',
-                2: 'Run and export output to file',
-                3: 'Cancel' }
-        menu.display( allAstMenu )
-        allAstDecision = int( input( ) )
-        if allAstDecision == 3:
-            runProgram( )
-        if allAstDecision == 2:
-            exportFlg = 'y'
+        if ( input( "Continue (y/n)? " ) == 'n' ):
+            exit()
+        # allAstMenu = { 0: 'What would you like to do?',
+        #         1: 'Run and display output on screen',
+        #         2: 'Run and export output to file',
+        #         3: 'Cancel' }
+        # menu.display( allAstMenu )
+        # allAstDecision = int( input( ) )
+        # if allAstDecision == 3:
+        # runProgram( )
+        # if allAstDecision == 2:
+            # exportFlg = 'y'
              
-    offset = int( input( "Where to start in data:( -1 if random ):  " ) )
+    #offset = int( input( "Where to start in data:( -1 if random ):  " ) )
     
     if ( offset < 0 and maxIn < asteroid_data.count( ) ):
         offset = rand.randint( 0, asteroid_data.count( ) - maxIn - 1 )
 
-    exportFlg = input( "Would you like to export the results ( y/n )? " )
+    # exportFlg = input( "Would you like to export the results ( y/n )? " )
 
-    if exportFlg == 'y':
-        fileType =  int( input( "Export as \n 1. .html \n 2. .csv \n" ) )
-        filename = input( "filename: " )
+    # if exportFlg == 'y':
+        # fileType =  int( input( "Export as \n 1. .html \n 2. .csv \n" ) )
+        # filename = input( "filename: " )
 
-    fltr = getFilter( )
+    # fltr = getFilter( )
+    fltr = [ fltrType, fltrLvl ]
         
     # num of asteroids we have looked at 
     ast_ct = 0
-
-    # get all asteroid names
-    asteroidNames = pd.DataFrame( asteroid_data.find( {},{ '_id': 0, 'ssnamenr' : 1 } ) )
 
     #Sigma Matrix
     extraCols = 3 # for: rowSum, absRowSum, asteroidRating
@@ -465,7 +520,8 @@ def runProgram( ):
         print( newData )
     
     # first printout of relevant asteroid data
-    if ( input( "Look at total data histogram ( y/n ): " ) == 'y' ):
+    # if ( input( "Look at total data histogram ( y/n ): " ) == 'y' ):
+    if ( plots == 'y' ):
         totalHistFigs, plts = plt.subplots( 2, 3, figsize=( 15,15 ) )
         totalHistFigs.suptitle( "Histograms" )
 
@@ -539,11 +595,11 @@ def runProgram( ):
     # filtering loop for individual attributes
     filteredDataset = dataset
     emptyFlag = False
-    continueFlag = True
+    continueFlag = ( featFltr != 'n' ) # will not start if no featFltr was given at start
 
     while ( continueFlag and( not emptyFlag ) ):
-        filterInput = input( "Enter feature to filter by( 'n' if None ): \n" )
-        continueFlag = ( filterInput != 'n' )
+        # filterInput = input( "Enter feature to filter by( 'n' if None ): \n" )
+        # continueFlag = ( filterInput != 'n' )
 
         if ( continueFlag ):
             filterHighLimit = int( input( "Data >  " ) )
@@ -575,8 +631,8 @@ def runProgram( ):
                     continueFlag = True
 
     # prompt for inspecting specific asteroid after running program on multiple
-    if ( input( "Inspect Specific Asteroid( y/n ): " ) == "y" ):
-        viewOne( )
+    # if ( input( "Inspect Specific Asteroid( y/n ): " ) == "y" ):
+        # viewOne( )
     
 ########################################################################################
 ### VIEWONE function
@@ -585,9 +641,13 @@ def runProgram( ):
 ### Use: Allows user to specific the name ( numerical 'ssnamenr' from database ) of an
 ### asteroid they wish to analyze more in depth than in runProgram. 
 ########################################################################################
-def viewOne( ):
-    astName = input( "Asteroid Name:\n" )
-    clear( 2 )
+def viewOne( astArgs, exportFlg, exportArgs, plots ):
+    # astName = input( "Asteroid Name:\n" )
+    astName = astArgs[ 0 ]
+    featFltr = astArgs[ 1 ]
+    lB = astArgs[ 2 ]
+    uB = astArgs[ 3 ]
+    # clear( 2 )
     asteroid = pd.DataFrame( mag18Data.find( { "ssnamenr": int( astName ) } ).sort( "jd" ) )
 
     menu2Dict = { 0: 'Inspect Asteroid ' + str( astName ) + ":",
@@ -796,7 +856,8 @@ def viewOne( ):
                           ylabel = "H",
                           title = "elong vs. H" )
 
-                if ( input( "Export all plots as .png ( y/n )?" ) ):
+                # if ( input( "Export all plots as .png ( y/n )?" ) ):
+                if ( exportFlg == "y" and plots == "y" ):
                     savefileAll = "ast-" + astName + "-alldataplots.png"
                     astDataFigs.savefig( savefileAll )                    
 
@@ -863,28 +924,61 @@ def viewOne( ):
 ### and export data on asteroids pulled from the mongo database.
 ########################################################################################
 def main( ):
-    clear( 20 )
-    menuDict = { 0: 'SNAPS Menu',
-                1: 'Run program',
-                2: 'View specific asteroid',
-                3: 'Help',
-                4: 'Quit' }
+    # clear( 20 )
+    maxIn = int( sys.argv[ 1 ] )
+    offset = int( sys.argv[ 2 ] )
+    fltrType = int( sys.argv[ 3 ] )
+    fltrLvl = int( sys.argv[ 4 ] )
+    plots = sys.argv[ 5 ]
+    exportFlg = sys.argv[ 6 ]
+    exportArgs = []
+    astArgs = []
 
-    menuChoice = 0
-
-    while menuChoice != 4:
-        menu.display( menuDict )
-        menuChoice = int( input( ) )
-        clear( 2 )
-        if menuChoice == 1:
-            runProgram( )
-        elif menuChoice == 2:
-            viewOne( )
-            break
-        elif menuChoice == 3:
-            help( )
+    if len(sys.argv) <= 7:
+        exportArgs = [ 2, "" ]
+        astArgs = [ 0, 'n', 0, 0 ]
+    else:
+        help()
+        if exportFlg == 'y':
+            exportArgs = [ int( sys.argv[ 7 ] ),
+                           sys.argv[ 8 ] ]
+            if maxIn == 1:
+                astArgs = [ int( sys.argv[ 9 ] ),
+                            sys.argv[ 10 ],
+                            int( sys.argv[ 11 ] ),
+                            int( sys.argv[ 12 ] ) ]
         else:
-            break
+            astArgs = [ int( sys.argv[ 7 ] ),
+                        sys.argv[ 8 ],
+                        int( sys.argv[ 9 ] ),
+                        int( sys.argv[ 10 ] ) ]
+    
+    if maxIn == 1:
+        viewOne( astArgs, featFltr, exportFlg, exportArgs, plots )
+    else:
+        runProgram( maxIn, offset, exportFlg, exportArgs, fltrType, fltrLvl, plots )
+
+    # menuDict = { 0: 'SNAPS Menu',
+    #             1: 'Run program',
+    #             2: 'View specific asteroid',
+    #             3: 'Help',
+    #             4: 'Quit' }
+
+    # menuChoice = 0
+
+    # while menuChoice != 4:
+    #     menu.display( menuDict )
+    #     menuChoice = int( input( ) )
+    #     clear( 2 )
+    #     if menuChoice == 1:
+    #         runProgram( )
+    #     elif menuChoice == 2:
+    #         viewOne( )
+    #         break
+    #     elif menuChoice == 3:
+    #         help( )
+    #     else:
+    #         break
 
 ## Run the program #####################################################################
 main( )
