@@ -5,22 +5,25 @@
 #SBATCH --output=/scratch/sjc497/astMat.out #this is the file for stdout 
 #SBATCH --error=/scratch/sjc497/astMat.err #this is the file for stderr
 
-#SBATCH --time=06:00:00        #Job timelimit is 4 hours
+#SBATCH --time=00:10:00        #Job timelimit is 4 hours
 #SBATCH --mem=8GB        #memory requested in MiB
 #SBATCH --cpus-per-task=1
 
 # VARIABLES ---------------------------------------
 # required variables:
-maxIn=1000
-offset=2478
+maxIn=3
+offset=0
+# attrs=['elong', 'mag18omag8', 'H', 'rb']
+
 fltrType=2
-fltrLvl=40
+fltrLvl=1
+
 plots=n
-exportFlg=y
+exportFlg=n
 
 # optional variables:
-fileType=1 # default 2 (.csv)
-fileName="~/astroInfoResearch/astroInfo/2478-3478GTE40" # default ""
+fileType=2 # default 2 (.csv)
+fileName="~/astroInfoResearch/astroInfo/allAstAbove35" # default ""
 astName=0 # default 0
 featFltr=n # default n
 lB=0 # default 0
@@ -28,21 +31,23 @@ uB=0 # default 0
 
 
 # PROFILING ---------------------------------------
-# time kernprof -lv astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg"
+# assumes there is no plots or output
+# time kernprof -lv 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg"
+
 
 
 # RUNNING -----------------------------------------
 # No export, multiple asteroids
-# time python astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg"
+time python 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg"
 
 # Export multiple asteroids
-time python astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg" "$fileType" "$fileName"
+# time python 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg" "$fileType" "$fileName"
 
 # No export, single asteroid
-# time python astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg" "$astName" "$featFltr" "$lB" "$"uB"
+# time python 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg" "$astName" "$featFltr" "$lB" "$"uB"
 
 # Export single asteroid
-# time python astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg" "$fileType" "$fileName" "$astName" "$featFltr" "$lB" "$"uB"
+# time python 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg" "$fileType" "$fileName" "$astName" "$featFltr" "$lB" "$"uB"
 
 # if [$(maxIn) == -1]; then
 # fi

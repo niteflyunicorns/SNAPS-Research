@@ -1,6 +1,6 @@
 # Notes on Anomalous Asteroid Detection Program
 # Programmer: Savannah Chappus
-# Last Update: 6.7.2024
+# Last Update: 7.28.2024
 
 # FUNCTION & USAGE
 ########################################################################################
@@ -50,6 +50,20 @@
   - add prompt for exporting dataplots or viewing dataplots (rather than just sigma matrix)
   - improve algorithm by incorporating more conditions to the rating like
     - if x and x happen right after x happens, then boost the rating by __%
+  - remove all references to 'night'
+  - continue running profiler and evaluating efficiency until it seems to be the best it can be
+  	- make it so that the mag18data is converted to a locally stored dataframe as soon as possible,
+	  then reference it in other places as a dataframe.
+  - add config file to gitignore with connection details to keep them secret
+  - add secondary filtering with sliding observation window (first 5 then over by 1 then again...)
+  - allow users to pick and choose which attributes to include
+  - make several copies of the run with different filter values
+  - check against SNAPS database light curves :)
+
+  - Colin Chandler list of asteroids
+  - make 3D and 2D plots
+  - make plot of all observation scores
+  	- should look like a little zig zag and maybe spikes every once in a while
 
 
 # NOTES ON ALGORITHM
@@ -94,6 +108,7 @@ Potentially Interesting Asteroids:
 * 99970
 * 99936
 * 98726
+* 990
 
 
 Definitely Interesting:

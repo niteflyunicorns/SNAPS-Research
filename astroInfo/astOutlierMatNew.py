@@ -21,10 +21,10 @@ import asteroidMenuClass as menu
 ## MONGO CONNECTION #####################################################################
 # in the connection string below, format is:
 # mongodb://YOURUSERNAME:YOURPASSWORD@YOURCOMPUTER.computers.nau.edu:27017
-dest = "mongodb://schappus:unicornsSUM22@cmp4818.computers.nau.edu:27017"
+dest = "mongodb://schappus:sP%23ckleD0809@cmp4818.computers.nau.edu:27017"
 client = MongoClient( dest )
 db = client.ztf
-mag18Data = db[ 'mag18o8' ] # all asteroids with mag18o8 data
+mag18Database = db[ 'mag18o8' ] # all asteroids with mag18o8 data
 asteroid_data = db[ 'asteroids_all' ]
 
 ## GLOBAL VARS ##########################################################################
@@ -91,6 +91,8 @@ ssdistnr, ssmagnr, id, night, phaseangle, obsdist, heliodist, H, ltc, mag18omag8
 # collected data
 # H: another measurement of brightness
 wantedAttrs = [ "elong", "rb", "H", "mag18omag8" ] # attributes we want to look at
+dataCols = wantedAttrs.copy()
+dataCols.extend( [ 'night', 'jd', 'id', 'ssnamenr' ] ) # additional cols needed for processing
 numFeatures = len( wantedAttrs )
 antIDS = list( ) # list for associated ztf id for observation
 weightDict = {
@@ -182,6 +184,7 @@ def normValue( value, minVal, maxVal ):
 
 # normDataset: takes in dataset (need not be single-column ) and normalizes
 # to range [ 0,1 ]
+#@profile
 def normDataset( astData ):
     normalizedData = astData.copy( )
     for col in wantedAttrs:
@@ -224,9 +227,6 @@ def getNightRating( data ):
 #@profile
 def getAstRating( astData ):
     nightRatings = [ ]
-    dataCols = [ ]
-    dataCols = wantedAttrs.copy()
-    dataCols.extend( [ 'ssnamenr' ] )
     newData = astData[ dataCols ]
     # print( newData )
     # for night in newData[ "night" ]:
@@ -239,6 +239,7 @@ def getAstRating( astData ):
 # formatDataTable: takes in sigma matrix, antares IDs array, asteroid name array,
 # number of asteroids, and number of features and formats the sigma matrix into
 # a more reader-friendly table with headers
+#@profile
 def formatDataTable( sigmaMatrix, antIDS, nameArray, maxIn, numFeatures ):
     listNames = [ ]
     idArray = [ ]
@@ -283,6 +284,7 @@ def formatDataTable( sigmaMatrix, antIDS, nameArray, maxIn, numFeatures ):
 # empty matrix to fill with sigma data. Computes sigmas for each attribute
 # and stores them in the matrix. Returns the sigma matrix and data regarding
 # the night of each observation's max sigma value
+#@profile
 def fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, outFlag ):
     attrData = [ ]
     nightData = [ ]
@@ -310,16 +312,21 @@ def fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, outFlag ):
         attr_weight = weightDict[ feature ]
 
         # sort specific asteroid data by feature & normalize
-        dataSortedByFeature = pd.DataFrame( 
-            mag18Data.find( { "ssnamenr": int( name ) } ).sort( feature ) )
-        normData = normDataset( dataSortedByFeature )
+        # dataSortedByFeature = pd.DataFrame( 
+            # mag18Data.find( { "ssnamenr": int( name ) } ).sort( feature ) )
+        # dataSortedByFeature = pd.DataFrame( 
+            # mag18Data.find( { "ssnamenr": int( name ) } ) )
+        asteroid.sort_values( by = [ feature ] )
+
+        # print( asteroid )
+        # normData = normDataset( dataSortedByFeature )
 
         # calculate min, max, and ranges for highSigma and lowSigma values
         minIndex = 0
-        maxIndex = len( dataSortedByFeature ) - 1
+        maxIndex = len( asteroid ) - 1
 
-        minVal = ( dataSortedByFeature[ feature ][ minIndex ] )
-        maxVal = ( dataSortedByFeature[ feature ][ maxIndex ] )
+        minVal = ( asteroid[ feature ][ minIndex ] )
+        maxVal = ( asteroid[ feature ][ maxIndex ] )
 
         upperRange = maxVal - obj_mean
         lowerRange = obj_mean - minVal
@@ -327,41 +334,41 @@ def fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, outFlag ):
         highSigma = upperRange / obj_stdev
         lowSigma = lowerRange / obj_stdev
 
-        featNightDF = dataSortedByFeature[ [ feature, "night" ] ]
+        featNightDF = asteroid[ [ feature, "night" ] ]
 
         
         # add data to sigmaMatrix
         if ( highSigma > lowSigma ):
             # night of observation
-            night = dataSortedByFeature[ "night" ][ maxIndex ]
+            night = asteroid[ "night" ][ maxIndex ]
 
             rowSum += highSigma * attr_weight
             absRowSum += highSigma * attr_weight
 
             # keep track of ant id with specific observation
-            antIDS.append( dataSortedByFeature[ 'id' ][ maxIndex ] )
+            antIDS.append( asteroid[ 'id' ][ maxIndex ] )
             attrData.append( highSigma * attr_weight )
 
             # store outliers
             outliers.append( maxVal )
 
             # calculations for filtering ( opt 2 )
-            outlierNorms.append( normData[ feature ][ maxIndex ] )
+            # outlierNorms.append( normData[ feature ][ maxIndex ] )
 
         else:
-            night = dataSortedByFeature[ "night" ][ minIndex ]
+            night = asteroid[ "night" ][ minIndex ]
             rowSum += -lowSigma * attr_weight
             absRowSum += lowSigma * attr_weight
 
             # keep track of ant id with specific observation
-            antIDS.append( dataSortedByFeature[ 'id' ][ minIndex ] )
+            antIDS.append( asteroid[ 'id' ][ minIndex ] )
             attrData.append( -lowSigma * attr_weight )
 
             # store outliers
             outliers.append( minVal )
 
             # calculations for filtering ( opt 2 )
-            outlierNorms.append( normData[ feature ][ minIndex ] )
+            # outlierNorms.append( normData[ feature ][ minIndex ] )
 
         # update attribute count
         attr_ct += 1
@@ -426,6 +433,7 @@ def fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, outFlag ):
 ### as desired from any starting point in the data, then computes and fills the sigma
 ### matrix and runs data analytics on the results.
 ########################################################################################
+#@profile
 def runProgram( maxIn, offset, exportFlg, exportArgs, fltrType, fltrLvl, plots ):
     # total num of asteroids we want to look at
     #maxIn = int( input( "How many asteroids do you want to look at( -1 if all ): " ) )
@@ -439,9 +447,9 @@ def runProgram( maxIn, offset, exportFlg, exportArgs, fltrType, fltrLvl, plots )
         # print(asteroid_data)
         maxIn = asteroidNames.size
         print( "WARNING: This will run all " + str( maxIn ) + " asteroids through the program." )
-        print( "This process may take several hours depending on your system.\n" )
-        if ( input( "Continue (y/n)? " ) == 'n' ):
-            exit()
+        # print( "This process may take several hours depending on your system.\n" )
+        # if ( input( "Continue (y/n)? " ) == 'n' ):
+            # exit()
         # allAstMenu = { 0: 'What would you like to do?',
         #         1: 'Run and display output on screen',
         #         2: 'Run and export output to file',
@@ -474,20 +482,31 @@ def runProgram( maxIn, offset, exportFlg, exportArgs, fltrType, fltrLvl, plots )
     extraCols = 3 # for: rowSum, absRowSum, asteroidRating
     sigmaMatrix = np.zeros( [ maxIn, numFeatures + extraCols ] )
 
+    # necessary data from database
+    # print( "asteroidNames \n" )
+    # astNamesArr = asteroidNames[ "ssnamenr" ][:maxIn].values.tolist()
+    # print( astNamesArr )
+    # mag18DataNew = pd.DataFrame( mag18Database.find( { "ssnamenr": { "$in": astNamesArr } }, { "id": 1, "ssnamenr": 1, "jd": 1, "elong": 1, "rb": 1, "H": 1, "mag18omag8": 1, "night": 1 } ) )
+    # print( mag18DataNew )
+
     # Loop through our collection of names
     while ( ast_ct < maxIn and ast_ct < len( asteroidNames ) ):
         # create temporary row variable to hold asteroid data for appending at the end
         attrData = [ ]
         nightData = [ ]
+        arrayOffset = ast_ct + offset
 
         # grab asteroid name
-        name = asteroidNames[ "ssnamenr" ][ ast_ct + offset ]
+        name = asteroidNames[ "ssnamenr" ][ arrayOffset ]
 
         # reset attributes looked at
         attr_ct = 0
 
         # sort specific asteroid data by Julian Date
-        asteroid = pd.DataFrame( mag18Data.find( { "ssnamenr": int( name ) } ).sort( "jd" ) )
+        mag18Data = pd.DataFrame( mag18Database.find( { "ssnamenr": int( name ) } ) )
+        mag18Data = mag18Data[ dataCols ]
+        # mag18Data = mag18DataNew
+        asteroid = mag18Data.sort_values( by = [ "jd" ] )
         attrData, nightData = fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, False )
         
         if len( attrData ) != 0:
@@ -502,7 +521,8 @@ def runProgram( maxIn, offset, exportFlg, exportArgs, fltrType, fltrLvl, plots )
     idArray = [ ]
         
     # Formatting data structures
-    nameArray = np.array( asteroidNames[ 'ssnamenr' ] )[ offset: offset + ast_ct ]
+    arrayOffset = offset + ast_ct
+    nameArray = np.array( asteroidNames[ 'ssnamenr' ] )[ offset: arrayOffset ]
 
     dataset = formatDataTable( sigmaMatrix, antIDS, nameArray, maxIn, numFeatures )
 
