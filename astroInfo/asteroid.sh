@@ -11,20 +11,20 @@
 
 # VARIABLES ---------------------------------------
 # required variables:
-maxIn=3
+maxIn=1
 offset=0
 # attrs=['elong', 'mag18omag8', 'H', 'rb']
 
 fltrType=2
 fltrLvl=1
 
-plots=n
-exportFlg=n
+plots=True
+exportFlg=False
 
 # optional variables:
 fileType=2 # default 2 (.csv)
-fileName="~/astroInfoResearch/astroInfo/allAstAbove35" # default ""
-astName=0 # default 0
+fileName="~/astroInfoResearch/astroInfo/trash" # default ""
+astName=8021 # default 0
 featFltr=n # default n
 lB=0 # default 0
 uB=0 # default 0
@@ -38,13 +38,13 @@ uB=0 # default 0
 
 # RUNNING -----------------------------------------
 # No export, multiple asteroids
-time python 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg"
+# time python 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg"
 
 # Export multiple asteroids
 # time python 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg" "$fileType" "$fileName"
 
 # No export, single asteroid
-# time python 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg" "$astName" "$featFltr" "$lB" "$"uB"
+time python 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg" "$astName" "$featFltr" "$lB" "$uB"
 
 # Export single asteroid
 # time python 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg" "$fileType" "$fileName" "$astName" "$featFltr" "$lB" "$"uB"

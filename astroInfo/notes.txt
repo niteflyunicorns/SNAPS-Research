@@ -108,10 +108,18 @@ Potentially Interesting Asteroids:
 * 99970
 * 99936
 * 98726
-* 990
+* 990 (on Erin's list - color changer)
+* 9219 (on Erin's list)
 
+Asteroids from Erin:
+* 8021
 
-Definitely Interesting:
+Known Active Asteroids:
 * 6478 (Gault)
 * 3200 (Phaethon)
 * 2060 (Chiron)
+* 1269
+* 1279
+* 410590
+* 551023
+* 248370
