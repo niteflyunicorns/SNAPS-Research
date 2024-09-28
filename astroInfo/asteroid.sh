@@ -16,18 +16,24 @@ offset=0
 # attrs=['elong', 'mag18omag8', 'H', 'rb']
 
 fltrType=2
-fltrLvl=1
+fltrLvl=2
 
 plots=True
 exportFlg=False
 
 # optional variables:
 fileType=2 # default 2 (.csv)
-fileName="~/astroInfoResearch/astroInfo/trash" # default ""
+fileName="~/astroInfoResearch/astroInfo/ast2652" # default ""
 astName=8021 # default 0
 featFltr=n # default n
 lB=0 # default 0
 uB=0 # default 0
+
+
+
+# PRE-RUN CLEANUP
+# remove output files from previous run
+# rm -f /scratch/sjc497/astMat.*
 
 
 # PROFILING ---------------------------------------
@@ -47,7 +53,7 @@ uB=0 # default 0
 time python 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg" "$astName" "$featFltr" "$lB" "$uB"
 
 # Export single asteroid
-# time python 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg" "$fileType" "$fileName" "$astName" "$featFltr" "$lB" "$"uB"
+# time python 2astOutlierMatNew.py "$maxIn" "$offset" "$fltrType" "$fltrLvl" "$plots" "$exportFlg" "$fileType" "$fileName" "$astName" "$featFltr" "$lB" "$uB"
 
 # if [$(maxIn) == -1]; then
 # fi

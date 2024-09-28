@@ -19,6 +19,12 @@
 # individual asteroids.                                                                #
 ########################################################################################
 
+# OTHER STUFF
+################################
+* use scp to copy:
+  	  scp sjc497@monsoon.hpc.nau.edu:~/astroInfoResearch/astroInfo/pngs/* ~/Desktop/astroinfo
+
+
 
 # CURRENT ERRORS & WARNINGS
 ########################################################################################
@@ -30,7 +36,7 @@
   WARNING 1: in runProgram(), the line that drops all rows with 0 in them may not work
   with the new algorithm because the new algorithm doesn't assign zeros in place of
   data. Alternatively, it may still be fine since there are no zeros in the matrix then
-
+v
   ERROR 2: In viewOne(), clearing the antIDS list works fine while the program runs but
   causes an error only upon exiting the program. I am not sure why.
 
@@ -65,6 +71,26 @@
   - make plot of all observation scores
   	- should look like a little zig zag and maybe spikes every once in a while
 
+  - add interactive functionality to plots?
+
+
+# THOUGHTS FOR SPRING 25 RESEARCH:
+ - modify program to fit LSST instead of ZTF
+ - add unit tests to program
+ - produce some sort of paper or writeup about work (maybe present at poster session, symposium, or publish)
+ - make README (and all file organization clear and easy for any successor to use
+ - make new repo for cleaned up version of things?
+ - modularize code better (functions are great but I could split the code up into different files to better manage things)
+
+
+NEW NAME IDEAS FOR PROGRAM:
+
+ADA: Anomaly Detection in Asteroids
+ASTRA: Asteroid Sudden Trend Recognition Algorithm
+ADAPT: Asteroid Detection of Anomalous Patterns and Trends
+AIDE: Asteroid Irregularity Detection Engine
+AIMS: Asteroid Irregularity Monitoring System
+
 
 # NOTES ON ALGORITHM
 ########################################################################################
@@ -94,6 +120,7 @@ H:
     Lower value = brighter
     Higher value = dimmer
     Algorithm uses: H minimal for 100% score
+	Note: Modified algorithm doesn't use H anymore
 
 MAG18OMAG8:
     Good = value closer to zero

@@ -9,12 +9,9 @@ from pymongo import MongoClient
 from pprint import pprint
 import pandas as pd
 import statistics as stat
-import tkinter
-import matplotlib
-# matplotlib.use( 'Qt4Agg' )
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
-
+import mplcursors
 import numpy as np
 import random as rand
 import pdb
@@ -25,8 +22,6 @@ import configparser as cfp
 # import asteroidMenuClass as menu
 
 ## MONGO CONNECTION #####################################################################
-# in the connection string below, format is:
-# mongodb://YOURUSERNAME:YOURPASSWORD@YOURCOMPUTER.computers.nau.edu:27017
 def getSecrets():
     config = cfp.ConfigParser()
     config.read( 'config.ini' )
@@ -240,8 +235,8 @@ def getAllObsRatings( data, attr ):
 # getAstRating: provides a rating for an asteroid based on highest observation
 # rating for the asteroid based on outliers
 #@profile
-def getAstRating( inData, plots ):
-    plots = True
+def getAstRating( inData, plots, export ):
+    # plots = False
     ratings = [ ]
     frames = [ ]
     newAttrs = [ 'elong', 'rb', 'mag18omag8' ]
@@ -257,30 +252,53 @@ def getAstRating( inData, plots ):
 
     if plots:
         plotData = ratingsData.sort_values( by = ['jd'] )
-        plotAstRatings( data[ 'ssnamenr' ][ 0 ], plotData[ 'jd' ], plotData[ 'ratings' ], "jd", "rating" )
+        plotAstRatings( data[ 'ssnamenr' ][ 0 ], plotData[ 'jd' ], plotData[ 'ratings' ], "jd", "rating", export )
 
     astRating = max( ratings ) * 100
+    print( "Max Rating Index: " + str( ratings.index( max( ratings ) ) ) )
     return ratings, astRating
 
 # plotAstRating: plots the ratings for each observation of an asteroid as collected
 # in getAllObsratings
 #@profile
-def plotAstRatings( name, xData, yData, xName, yName ):
+def plotAstRatings( name, xData, yData, xName, yName, export ):
+    plt.clf()
     plt.title( "Asteroid " + str( name ) )
     plt.scatter( xData, yData, color = 'deeppink' )
     plt.xlabel( xName )
     plt.ylabel( yName )
     plt.ylim( 0, 1 )
 
-    exportFlg = False
-    if exportFlg:
+    if export:
         savefile = str( name ) + "-ratings.png"
         plt.savefig( savefile )
     else:
-        # plt.show( block = True )
+        ### TODO ###
+        # modify these two lines so that the annotation
+        # on hover states the elong, mag18, and rb
+        # values for that date. Maybe also include the
+        # actual value of the rating...?
+        # cursor = mplcursors.cursor( hover=True )
+        # cursor.connect( "add", lambda sel: sel.annotation.set_text( data[ "jd" ].iloc[ sel.index ] ) )
+        plt.show( block=True )
         plt.show()
-    
-    
+        pass
+
+# getAllObs: takes an asteroid and it's data and prints
+# or exports each row in a nice neatly formatted way.
+def getAllObs( name, data, exportFlg ):
+    # if not exportFlg:
+    #     print( "Asteroid " + str( name ) + ":" )
+    #     for row in data:
+    #         if row in [ "elong", "rb", "id", "night", "H", "mag18omag8" ]:
+    #             miniDF = pd.concat( [ data[ "jd" ], data[ row ] ], axis=1, join='inner' )
+    #             # print( str(row) )
+    #             # print( str( data[ row ] ) )
+    #             print( miniDF )
+    # else:
+    pass
+            
+  
 # formatDataTable: takes in sigma matrix, antares IDs array, asteroid name array,
 # number of asteroids, and number of features and formats the sigma matrix into
 # a more reader-friendly table with headers
@@ -330,7 +348,7 @@ def formatDataTable( sigmaMatrix, antIDS, nameArray, maxIn, numFeatures ):
 # and stores them in the matrix. Returns the sigma matrix and data regarding
 # the night of each observation's max sigma value
 #@profile
-def fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, outFlag, plot ):
+def fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, outFlag, plot, export ):
     attrData = [ ]
     obsData = [ ]
     outliers = [ ]
@@ -441,7 +459,8 @@ def fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, outFlag, plot ):
         # 1 to 100 for each category. Then, scores for each category are averaged to get
         # total score for the asteroid. ## TODO ( optional ): incorporate weighting system
         rowAttrs = attrData
-        ratings, astRating = getAstRating( asteroid, plot )
+        ratings, astRating = getAstRating( asteroid, plot, export )
+        
         if astRating < fltrLevel:
             stripFlag = True
     elif fltrType == 3:
@@ -552,13 +571,26 @@ def runProgram( maxIn, offset, exportFlg, exportArgs, fltrType, fltrLvl, plots )
         mag18Data = mag18Data[ dataCols ]
         # mag18Data = mag18DataNew
         asteroid = mag18Data.sort_values( by = [ "jd" ] )
-        attrData, obsData = fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, False, plots )
+        attrData, obsData = fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, False, plots, exportFlg )
         
         if len( attrData ) != 0:
             sigmaMatrix[ ast_ct ] = attrData
 
         # update asteroid count
         ast_ct += 1
+
+        if plots:
+            plot3Das2D( name, asteroid['rb'],
+                        asteroid['elong'],
+                        asteroid['mag18omag8'],
+                        "rb", "elong", "mag18omag8",
+                        asteroid, exportFlg )
+        
+            plot3Dand2D( name, asteroid['rb'],
+                         asteroid['elong'],
+                         asteroid['mag18omag8'],
+                         "rb", "elong", "mag18omag8",
+                         asteroid, exportFlg )
 
     # Reset arrays for rerunning program
     nameArray = [ ]
@@ -734,13 +766,12 @@ def viewOne( astArgs, exportFlg, exportArgs, fltrType, fltrLvl, plots ):
         print( "Asteroid " + str( astName ) + " Stats:\n" )
         astSigmaMatrix = np.zeros( [ 1, numFeatures + 2 ] )
         obsData = [ ]
-        sigmaMatrix, obsData, outliers = fillSigmaMatrix( astName,asteroid,
-                                                           astSigmaMatrix,
-                                                           fltr, True, plots )
+        sigmaMatrix, obsData, outliers = fillSigmaMatrix( astName, asteroid, astSigmaMatrix, fltr, True, plots, exportFlg )
         if len( sigmaMatrix ) == 0:
             print( "ERROR: Your chosen filter level yielded an empty matrix!" )
             antIDS.clear( )
-            viewOne( )
+            # viewOne( )
+            # THIS FUNCTIONALITY IS DEPRECATED
 
         #breakpoint( )
         table = formatDataTable( sigmaMatrix, antIDS, [ astName ], 1, numFeatures )
@@ -798,13 +829,24 @@ def viewOne( astArgs, exportFlg, exportArgs, fltrType, fltrLvl, plots ):
 
 
         ###### NEW PLOTTING ######
-        # plot3Das2D( astName, asteroid['rb'],
-        #             asteroid['elong'],
-        #             asteroid['mag18omag8'],
-        #             "rb", "elong",
-        #             "mag18omag8", exportFlg )
-        
-        # plot3Dand2D( astName, asteroid['rb'],
+        if plots:
+            plot3Das2D( astName, asteroid['rb'],
+                        asteroid['elong'],
+                        asteroid['mag18omag8'],
+                        "rb", "elong", "mag18omag8",
+                        asteroid, exportFlg )
+
+            plot3Dand2D( astName, asteroid['rb'],
+                        asteroid['elong'],
+                        asteroid['mag18omag8'],
+                        "rb", "elong", "mag18omag8",
+                        asteroid, exportFlg )
+
+        # call function to print all observations of
+        # this asteroid
+        getAllObs( astName, asteroid, exportFlg )
+
+        # plot3D( astName, asteroid['rb'],
         #             asteroid['elong'],
         #             asteroid['mag18omag8'],
         #             "rb", "elong",
@@ -988,7 +1030,6 @@ def viewOne( astArgs, exportFlg, exportArgs, fltrType, fltrLvl, plots ):
 
         if attr == "jd":
             # print new plot with vertical line on plot for viewing one night specifically
-            ### TODO: Add prompt for showing or exporting plots
             # astDataFigs.show( )
             jdAtObs = [ ]
             obsData = asteroid.loc[ ( asteroid[ attr ] == attrData ) ]
@@ -1022,24 +1063,45 @@ def viewOne( astArgs, exportFlg, exportArgs, fltrType, fltrLvl, plots ):
 def plot1D():
     pass
     
-def plot2D( name, xData, yData, xName, yName ):
-    plt.title( "Asteroid " + str( name ) )
-    plt.scatter( xData, yData, color = 'deeppink' )
-    plt.xlabel( xName )
-    plt.ylabel( yName )
+def plot2D( astName, xdata, ydata,
+            data, xname, yname, export ):
+    plt.title( "Asteroid " + str( astName ) )
+    plt.scatter( xdata, ydata, color = 'deeppink' )
+    plt.xlabel( xname )
+    plt.ylabel( yname )
 
-    plt.show( block = True )
-    plt.show()
+    if export:
+        fig.savefig( str(astName) + "plots2D.png" )
+    else:
+        cursor = mplcursors.cursor( hover=True )
+        cursor.connect( "add", lambda sel: sel.annotation.set_text( data[ "jd" ].iloc[ sel.index ] ) )
+        plt.show( block = True )
+        plt.show()
 
-def plot3D():
+def plot3D( astName, xdata, ydata, zdata,
+            xname, yname, zname, export ):
+    
+    # fig, ax = plt.subplots( projection='3d' )
+    # fig.suptitle( "Asteroid " + str( astName ) )
+    # ax.scatter( xdata, ydata, zdata,
+    #             color = 'deeppink' )
+    # ax.set_xlabel( xname )
+    # ax.set_ylabel( yname )
+    # ax.set_zlabel( zname )
+
+    # if export:
+    #     fig.savefig( str(astName) + "plot3D.png" )
+    # else:
+    #     plt.show( block=True )
+    #     fig.show()
+
     pass
+    
 
 def plot3Das2D( astName, xdata, ydata, zdata,
-                    xname, yname, zname, export ):
+                    xname, yname, zname, data, export ):
 
     fig, ax = plt.subplots( 3, layout="constrained" )
-    plt.tight_layout( h_pad=3, w_pad=6 )
-
     fig.suptitle( "Asteroid " + str( astName ) )
 
     # first subplot
@@ -1048,41 +1110,42 @@ def plot3Das2D( astName, xdata, ydata, zdata,
     ax[0].set_ylabel( yname )
 
     # second subplot
-    ax[1].scatter( zdata, ydata, label="y-z", color="deeppink" )
-    ax[1].set_ylabel( yname )
-    ax[1].set_xlabel( zname )
+    ax[1].scatter( xdata, zdata, color="slateblue" )
+    ax[1].set_xlabel( xname )
+    ax[1].set_ylabel( zname )
 
     # third subplot
-    ax[2].scatter( xdata, zdata, label="z-x", color="deeppink" )
-    ax[2].set_xlabel( xname )
-    ax[2].set_ylabel( zname )
+    ax[2].scatter( zdata, ydata, color="teal" )
+    ax[2].set_ylabel( yname )
+    ax[2].set_xlabel( zname )
 
-    # plt.subplots_adjust( top=0.95, bottom=0.1, left=0.1, right=0.85 )
 
     if export:
-        fig.savefig( str(astName) + "3-2Dplots.png" )
+        fig.savefig( str(astName) + "plots3-2D.png" )
     else:
+        cursor = mplcursors.cursor( hover=True )
+        cursor.connect( "add", lambda sel: sel.annotation.set_text( data[ "jd" ].iloc[ sel.index ] ) )
         plt.show( block=True )
-        fig.show()
+        # fig.show()
         
-    # pass
-
     
     
 def plot3Dand2D( astName, xdata, ydata, zdata,
-                    xname, yname, zname, export ):
+                    xname, yname, zname, data, export ):
 
-    export = False
+    # export = False
     
-    # leftSide = [ ['top'], ['middle'], ['bottom'] ]
-    # fig, ax = plt.subplot_mosaic( [ leftSide, ['right'] ], layout="constrained" )
     fig = plt.figure( figsize=(12, 8) )
     gs = gridspec.GridSpec( 1, 2, width_ratios=[ 1, 1.5 ] )
     fig.suptitle( "Asteroid " + str( astName ) )
 
 
     ax3d = fig.add_subplot( gs[0,0], projection='3d' )
-    ax3d.scatter( xdata, ydata, zdata )
+    ax3d.scatter( xdata, ydata, zdata,
+                  color = 'darkorchid' )
+    ax3d.set_xlabel( xname )
+    ax3d.set_ylabel( yname )
+    ax3d.set_zlabel( zname )
 
     gs_right = gridspec.GridSpecFromSubplotSpec( 3, 1, subplot_spec=gs[0,1],
                                         height_ratios=[1, 1, 1], hspace=0.4 )
@@ -1093,51 +1156,23 @@ def plot3Dand2D( astName, xdata, ydata, zdata,
 
     gs.update( wspace=0.4, hspace=0.4 )
 
-    ax2d1.scatter( xdata, ydata )
+    ax2d1.scatter( xdata, ydata, color = 'deeppink' )
     ax2d1.set_xlabel( xname )
     ax2d1.set_ylabel( yname )
 
-    ax2d2.scatter( xdata, zdata )
+    ax2d2.scatter( xdata, zdata, color = 'slateblue' )
     ax2d2.set_xlabel( xname )
     ax2d2.set_ylabel( zname )
 
-    ax2d3.scatter( zdata, ydata )
+    ax2d3.scatter( zdata, ydata, color = 'teal' )
     ax2d3.set_xlabel( zname )
     ax2d3.set_ylabel( yname )
 
-    # plt.tight_layout()
-    plt.show( block=True )
-    fig.show()
-
-    # first subplot
-    # ax2DXY = fig.add_subplot( 1, 2, 1 )
-    # ax2DXY.scatter( xdata, ydata, color="deeppink" )
-    # ax2DXY.set_xlabel( xname )
-    # ax2DXY.set_ylabel( yname )
-
-    # second subplot
-    # ax2DYZ = fig.add_subplot( 1, 2, 2 )
-    # ax[1,0].scatter( zdata, ydata, label="y-z", color="deeppink" )
-    # ax[1,0].set_ylabel( yname )
-    # ax[1,0].set_xlabel( zname )
-
-    # third subplot
-    # ax[1,1].scatter( xdata, zdata, label="z-x", color="deeppink" )
-    # ax[1,1].set_xlabel( xname )
-    # ax[1,1].set_ylabel( zname )
-
-
-    # fourth subplot
-    # ax3D = fig.add_subplot(1, 2, 2, projection='3d' )
-    # ax[0,0].scatter( xdata, ydata, zdata, color='lightblue' )
-    # ax[0,0].set( xticklabels=[xname],
-    #              yticklabels=[yname],
-    #              zticklabels=[zname] )
-    
-
     if export:
-        fig.savefig( str(astName) + "3-2Dplots.png" )
+        fig.savefig( str(astName) + "plots3D+2D.png" )
     else:
+        cursor = mplcursors.cursor( hover=True )
+        cursor.connect( "add", lambda sel: sel.annotation.set_text( data[ "jd" ].iloc[ sel.index ] ) )
         plt.show( block=True )
         fig.show()
         
@@ -1170,7 +1205,8 @@ def main( ):
     # annoying handling of boolean inputs - may change this later
     exportFlg = [ False, True ][ exportFlg.lower()[0] == "t" ]
     plots = [ False, True ][ plots.lower()[0] == "t" ]
-    
+
+    print(exportFlg)
     if len(sys.argv) <= 7:
         pass
         # exportArgs = [ 2, "" ]
