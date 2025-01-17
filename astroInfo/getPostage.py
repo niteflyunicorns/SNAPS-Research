@@ -4,8 +4,9 @@
 # 10.22.2024
 
 import urllib.request as geturl
-import requests
+# import requests
 import os
+import sys
 import pandas as pd
 import functools as ft
 
@@ -52,9 +53,9 @@ def getFileSizes( filePath ):
     return sum
 
 def main():
-    if len( sys.argv > 1 ):
+    if len( sys.argv ) > 1:
         fromFile = sys.argv[ 1 ] # enter as "True"
-        filePath = "/home/sjc497/CS453Monsoon/finalProj/ztfIds.txt"
+        filePath = "/home/sjc497/astroInfoResearch/astroInfo/ztfIds.txt"
         # might have user give the file path instead??
     else:
         fromFile = False
@@ -73,9 +74,15 @@ def main():
     if fromFile:
         for line in readFile( filePath ):
             fileName = line.strip()
+            print(fileName)
+            ztfID, candID = line.split(', ')
+            print(ztfID)
+            print(candID)
+            candID = candID.strip()
             newUrl = urlPrefix + ztfID + urlSpacer + candID + urlSuffix
+            print(newUrl)
 
-            os.system( "wget --show-progress -w 3 -P " + inFolder + " " + newUrl )
+            os.system( "wget --remote-encoding=utf-8 " + newUrl )
 
     else:
         pass

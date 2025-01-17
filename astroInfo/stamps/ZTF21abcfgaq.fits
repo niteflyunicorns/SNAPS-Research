@@ -1,0 +1,11 @@
+--2024-11-05 11:36:19--  https://avro.alerce.online/get_stamp?oid=ZTF21abcfgaq&candid=1602185094815015005&type=difference&format=fits
+Resolving avro.alerce.online (avro.alerce.online)... 100.27.109.157, 52.72.184.194, 3.219.83.181, ...
+Connecting to avro.alerce.online (avro.alerce.online)|100.27.109.157|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 14847 (14K) [application/fits+gzip]
+Saving to: ‘get_stamp?oid=ZTF21abcfgaq&candid=1602185094815015005&type=difference&format=fits.2’
+
+     0K .......... ....                                       100%  231M=0s
+
+2024-11-05 11:36:19 (231 MB/s) - ‘get_stamp?oid=ZTF21abcfgaq&candid=1602185094815015005&type=difference&format=fits.2’ saved [14847/14847]
+

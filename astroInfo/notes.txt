@@ -1,6 +1,6 @@
 # Notes on Anomalous Asteroid Detection Program
 # Programmer: Savannah Chappus
-# Last Update: 7.28.2024
+# Last Update: 10.01.2024
 
 # FUNCTION & USAGE
 ########################################################################################
@@ -71,7 +71,10 @@ v
   - make plot of all observation scores
   	- should look like a little zig zag and maybe spikes every once in a while
 
-  - add interactive functionality to plots?
+  - add __pycache__ and .lprof to gitignore
+  - reintroduce interactivity to program - either a) give users option in shell to run interactively or not or b) write program that wraps around existing code and runs interactive space there - probably b) is better.
+  - work on writing pipeline to funnel ZTF ids from program output, and then fetch postage stamps from ALeRCE.
+  		 - sometimes one ZTF id may have more than one image, so include the candidate id when querying
 
 
 # THOUGHTS FOR SPRING 25 RESEARCH:
@@ -80,6 +83,7 @@ v
  - produce some sort of paper or writeup about work (maybe present at poster session, symposium, or publish)
  - make README (and all file organization clear and easy for any successor to use
  - make new repo for cleaned up version of things?
+     - includes figuring out pipeline / alternative for all Mongo data...
  - modularize code better (functions are great but I could split the code up into different files to better manage things)
 
 
