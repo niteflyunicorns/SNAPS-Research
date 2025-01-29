@@ -24,7 +24,7 @@ exportFlg=False
 # optional variables:
 fileType=2 # default 2 (.csv)
 fileName="~/astroInfoResearch/astroInfo/ast291032" # default ""
-astName=291032 # default 0
+astName=216 # default 0
 featFltr=n # default n
 lB=0 # default 0
 uB=0 # default 0

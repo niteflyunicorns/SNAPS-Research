@@ -369,7 +369,7 @@ def fillSigmaMatrix( name, asteroid, sigmaMatrix, fltr, outFlag, plot, export ):
             obj_stdev = stat.stdev( asteroid[ feature ] )
             obj_mean = stat.mean( asteroid[ feature ] )
         except Exception as e:
-            print( ( name + " is the object causing error" ), e )
+            print( ( str(name) + " is the object causing error" ), e )
             
         # grab weight for feature
         attr_weight = weightDict[ feature ]
